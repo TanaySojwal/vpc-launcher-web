@@ -7,7 +7,38 @@ body {
 h1 {
     text-align: left;
 }
-.container {
-    display: flex;
-    justify-content: space-evenly;
+h2 {
+    text-align: center;
+}
+div {
+    margin-bottom: 10px;
+}
+form {
+    width: 80%;
+    margin: 0 auto;
+}
+
+label, input, select {
+    display: inline-block;
+}
+
+label {
+    width: 30%;
+    text-align: right;
+}
+
+label + input + select {
+    width: 30%;
+    margin: 0 30% 0 4%;
+}
+
+input + input {
+    float: right;
+}
+
+select + select {
+    float: right;
+}
+#private-subnet-internet-container {
+    display: none;
 }

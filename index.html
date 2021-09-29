@@ -7,22 +7,61 @@
         <link rel="stylesheet" href="main.css">
         <script type="text/javascript" src="app.js"></script>
     </head>
-    <body>
-        <h1>VPC Launcher</h1>
-        <hr>
-        <div class="container">
-            <h2>Access to account</h2>
-        
-        </div>
-        <hr>
-        <div class="container">
-            <h2>VPC type</h2>
+    <body onload="describeAllRegions()">
+        <form>
 
-        </div>
-        <hr>
-        <div class="container">
+            <h1>VPC Launcher</h1>
+
+            <hr>
+            
+            <h2>Access to AWS account</h2>
+            <div>
+                <label>Cross account role ARN</label>
+                <input type="text" name="cross-account-role-arn" id="cross-account-role-arn" required>
+            </div>
+
+            <hr>
+
+            <h2>VPC Type</h2>
+            <div>
+                <label>Public subnets only</label>
+                <input type="checkbox" name="public-subnet" id="public-subnet" onchange="onPublicSubnetCheck()">
+            </div>
+            <div>
+                <label>Public and private subnets</label>
+                <input type="checkbox" name="public-private-subnet" id="public-private-subnet" onchange="onPublicPrivateSubnetCheck()">
+            </div>
+            <div id="private-subnet-internet-container">
+                <label>Add internet access to private subnet?</label>
+                <input type="checkbox" name="private-subnet-internet" id="private-subnet-internet">
+            </div>
+
+            <hr>
+
             <h2>Attributes</h2>
-
-        </div>
+            <div>
+                <label>VPC Name</label>
+                <input type="text" name="vpc-name" id="vpc-name" required>
+            </div>
+            <div>
+                <label>Region</label>
+                <select name="vpc-region" id="vpc-region" onchange="describeAZs()">
+                    <option value="" selected="selected">Select a region</option>
+                </select>
+            </div>
+            <div>
+                <label>Availability zone</label>
+                <select name="vpc-az" id="vpc-az">
+                    <option value="" selected="selected">Select an AZ</option>
+                </select>
+            </div>
+            <div>
+                <label>Enable IPv6</label>
+                <input type="checkbox" name="enable-ipv6" id="enable-ipv6">
+            </div>
+            <div>
+                <button type="submit" name="submit" onclick="createVPC()">Create</button>
+            </div>
+        </form>
     </body>
 </html>
