@@ -8,7 +8,7 @@
         <script type="text/javascript" src="app.js"></script>
     </head>
     <body onload="describeAllRegions()">
-        <form>
+        <form onsubmit="createVPC()">
 
             <h1>VPC Launcher</h1>
 
@@ -60,7 +60,9 @@
                 <input type="checkbox" name="enable-ipv6" id="enable-ipv6">
             </div>
             <div>
-                <button type="submit" name="submit" onclick="createVPC()">Create</button>
+                <button type="submit" name="submit">Create VPC</button>
+            </div>
+            <div id="load-state-container">
             </div>
         </form>
     </body>

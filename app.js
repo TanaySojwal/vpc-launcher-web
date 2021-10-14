@@ -23,7 +23,7 @@ function createVPC() {
         enableIPv6
     }
     
-    xhr.open('POST', `${vpcLauncherAPIUrl}?action=CREATE_VPC`, true)
+    xhr.open('POST', `${vpcLauncherAPIUrl}?action=CREATE_VPC`, false)
     xhr.send(JSON.stringify({payload}))
     xhr.onload = () => {
         if (xhr.status == 200) {
@@ -57,8 +57,6 @@ function describeAllRegions() {
             alert(`An error occurred while fetching regions!`)
         }
     }
-
-    
 }
 
 function describeAZs() {

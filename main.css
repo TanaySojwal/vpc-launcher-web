@@ -42,3 +42,17 @@ select + select {
 #private-subnet-internet-container {
     display: none;
 }
+.loader {
+    width:60px;
+    height:60px;
+    background:0 0;
+    border:10px solid transparent;
+    border-top-color:#f56;
+    border-left-color:#f56;
+    border-radius:50%;
+    animation:loader .75s 10 ease forwards
+} @keyframes loader {
+    100% {
+        transform:rotate(360deg)
+    }
+}
