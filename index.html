@@ -8,20 +8,15 @@
         <script type="text/javascript" src="app.js"></script>
     </head>
     <body onload="describeAllRegions()">
-        <form onsubmit="createVPC()">
-
+        <form>
             <h1>VPC Launcher</h1>
-
             <hr>
-            
             <h2>Access to AWS account</h2>
             <div>
                 <label>Cross account role ARN</label>
                 <input type="text" name="cross-account-role-arn" id="cross-account-role-arn" required>
             </div>
-
             <hr>
-
             <h2>VPC Type</h2>
             <div>
                 <label>Public subnets only</label>
@@ -35,9 +30,7 @@
                 <label>Add internet access to private subnet?</label>
                 <input type="checkbox" name="private-subnet-internet" id="private-subnet-internet">
             </div>
-
             <hr>
-
             <h2>Attributes</h2>
             <div>
                 <label>VPC Name</label>
@@ -50,9 +43,9 @@
                 </select>
             </div>
             <div>
-                <label>Availability zone</label>
+                <label>How many AZ to launch config for?</label>
                 <select name="vpc-az" id="vpc-az">
-                    <option value="" selected="selected">Select an AZ</option>
+                    <option value="" selected="selected">Select no. of AZs</option>
                 </select>
             </div>
             <div>
@@ -60,9 +53,11 @@
                 <input type="checkbox" name="enable-ipv6" id="enable-ipv6">
             </div>
             <div>
-                <button type="submit" name="submit">Create VPC</button>
+                <button type="button" name="submit" id="submit" onclick="createVPC()">Create VPC</button>
             </div>
-            <div id="load-state-container">
+            <hr>
+            <h3>Process logs</h3>
+            <div id="logs-container">
             </div>
         </form>
     </body>
