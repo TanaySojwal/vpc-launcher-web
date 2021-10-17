@@ -2,9 +2,9 @@ const vpcLauncherAPIUrl = 'https://fs9gjfj2ei.execute-api.us-east-1.amazonaws.co
 
 function createVPC() {
 
-    // hide submit button
+    // hide submit button on submit to prevent resubmission
     document.getElementById("submit").style.display = "none"
-
+    document.getElementById("submit").style.display = "block"
 
     var xhr = new XMLHttpRequest()
 
@@ -45,45 +45,93 @@ function createVPC() {
         return
     }
 
-    // add cross account role ARN to lambda execution role policy
-    printNextLog("Adding cross account role ARN to lambda policy if not done already.")
+    printNextLog("attempting to add cross account role ARN to lambda policy if not done already.")
 
-    xhr.open('GET', `${vpcLauncherAPIUrl}?action=DESCRIBE_AZS&region=${region}`, true)
+    xhr.open('GET', `${vpcLauncherAPIUrl}?action=ADD_CROSS_ACC_POLICY_TO_ROLE&crossAccountRoleArn=${crossAccountRoleArn}`, true)
     xhr.send()
     xhr.onload = () => {
         if (xhr.status == 200) {
-            var result = JSON.parse(xhr.response)
-            console.log(result)
-            var azList = result['azList']
-            for (i = 0; i < azList.length; i++) {
-                if (i >= az) delete azList[i]
-            }
-            printNextLog(`Attempting to create VPC with region=${region} and az=${azList.toString()}`)
-
-            const vpcPayload = {
-                crossAccountRoleArn,
-                // isPublicOnly,
-                // internetAccess,
-                vpcName,
-                region,
-                // az,
-                enableIPv6
-            }
-            xhr.open('POST', `${vpcLauncherAPIUrl}?action=CREATE_VPC`, true)
-            xhr.send(JSON.stringify({vpcPayload}))
+            printNextLog(`backend response > ${xhr.response}`)
+            
+            xhr.open('GET', `${vpcLauncherAPIUrl}?action=DESCRIBE_AZS&region=${region}`, true)
+            xhr.send()
             xhr.onload = () => {
                 if (xhr.status == 200) {
-                    printNextLog("VPC created successfully!")
+                    
+                    var result = JSON.parse(xhr.response)
+                    console.log(result)
+                    var azList = result['azList']
+                    for (i = 0; i < azList.length; i++) {
+                        if (i >= az) delete azList[i]
+                    }
+
+                    printNextLog(`attempting to create VPC with name = ${vpcName} in region = ${region}`)
+
+                    const vpcPayload = {
+                        crossAccountRoleArn,
+                        // isPublicOnly,
+                        // internetAccess,
+                        vpcName,
+                        region,
+                        // az,
+                        enableIPv6
+                    }
+                    xhr.open('POST', `${vpcLauncherAPIUrl}?action=CREATE_VPC`, true)
+                    xhr.send(JSON.stringify({vpcPayload}))
+                    xhr.onload = () => {
+                        printNextLog(`backend response > ${xhr.response}`)
+                        if (xhr.status == 200) {
+                            
+                            var vpcId = JSON.parse(xhr.response)['vpcId']
+                            var publicRouteTableId = JSON.parse(xhr.response)['publicRouteTableId']
+                            return
+                            azList.forEach(az => {
+                                printNextLog(`attempting to create subnet in az = ${az}`)
+                                var publicSubnetName = `public-subnet-${az}`
+                                var privateSubnetName = `private-subnet-${az}`
+                                var subnetPayload = {
+                                    crossAccountRoleArn,
+                                    isPublicOnly,
+                                    internetAccess,
+                                    vpcId,
+                                    publicRouteTableId,
+                                    region,
+                                    az,
+                                    publicSubnetName,
+                                    privateSubnetName
+                                }
+                                xhr.open('POST', `${vpcLauncherAPIUrl}?action=CREATE_SUBNET`, true)
+                                xhr.send(JSON.stringify({subnetPayload}))
+                                xhr.onload = () => {
+                                    printNextLog(`backend response > ${xhr.response}`)
+                                    if (xhr.status == 200) {
+                                        return
+                                    } else {
+                                        printNextLog("An error occurred while creating subnet!")
+                                        return
+                                    }
+                                }
+                            });
+
+                            return
+                        } else {
+                            printNextLog("An error occurred while creating VPC!")
+                            return
+                        }
+                    }
+
                 } else {
-                    printNextLog("An error occurred while creating VPC!")
+                    printNextLog("An error occurred while fetching AZs!")
+                    return
                 }
             }
-
         } else {
-            printNextLog("An error occurred while fetching AZs!")
+            printNextLog("An error occurred while adding cross account role policy to lambda execution role!")
+            return
         }
     }
 
+    document.getElementById("submit").style.display = "none"
     return
 }
 
