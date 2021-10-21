@@ -1,10 +1,10 @@
 const vpcLauncherAPIUrl = 'https://fs9gjfj2ei.execute-api.us-east-1.amazonaws.com/cert'
-
+const vpcLauncherHelper = 'https://0x7zt4osma.execute-api.us-east-1.amazonaws.com/cert'
 function createVPC() {
 
     // hide submit button on submit to prevent resubmission
     document.getElementById("submit").style.display = "none"
-    document.getElementById("submit").style.display = "block"
+    document.getElementById("loader").style.display = "block"
 
     var xhr = new XMLHttpRequest()
 
@@ -59,10 +59,13 @@ function createVPC() {
                 if (xhr.status == 200) {
                     
                     var result = JSON.parse(xhr.response)
-                    console.log(result)
-                    var azList = result['azList']
-                    for (i = 0; i < azList.length; i++) {
-                        if (i >= az) delete azList[i]
+                    var azList = []
+                    if (result['azList'].length >= az) {
+                        for (i = 0; i < az; i++) {
+                            azList.push(result['azList'][i])
+                        }
+                    } else {
+                        alert("Invalid AZ value!")
                     }
 
                     printNextLog(`attempting to create VPC with name = ${vpcName} in region = ${region}`)
@@ -98,18 +101,24 @@ function createVPC() {
                                     region,
                                     az,
                                     publicSubnetName,
-                                    privateSubnetName
+                                    privateSubnetName,
+                                    publicSubnetCidr,
+                                    privateSubnetCidr
                                 }
-                                xhr.open('POST', `${vpcLauncherAPIUrl}?action=CREATE_SUBNET`, true)
-                                xhr.send(JSON.stringify({subnetPayload}))
-                                xhr.onload = () => {
-                                    printNextLog(`backend response > ${xhr.response}`)
-                                    if (xhr.status == 200) {
-                                        return
-                                    } else {
-                                        printNextLog("An error occurred while creating subnet!")
-                                        return
+                                try {
+                                    xhr.open('POST', `${vpcLauncherAPIUrl}?action=CREATE_SUBNET`, true)
+                                    xhr.send(JSON.stringify({subnetPayload}))
+                                    xhr.onload = () => {
+                                        printNextLog(`backend response > ${xhr.response}`)
+                                        if (xhr.status == 200) {
+                                            return
+                                        } else {
+                                            printNextLog("An error occurred while creating subnet!")
+                                            return
+                                        }
                                     }
+                                } catch (error) {
+                                    console.log(error.message);
                                 }
                             });
 
@@ -131,7 +140,7 @@ function createVPC() {
         }
     }
 
-    document.getElementById("submit").style.display = "none"
+    document.getElementById("loader").style.display = "none"
     return
 }
 

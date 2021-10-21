@@ -17,7 +17,7 @@ def lambda_handler(event, context):
             response_body = create_vpc(event)
         if event['queryStringParameters']['action'] == "ADD_CROSS_ACC_POLICY_TO_ROLE":
             response_body = add_cross_acc_policy_to_role(event)
-
+    print(response_body)
     return {
         'statusCode': 200,
         'headers': {
@@ -90,11 +90,11 @@ def describe_azs(event):
     }
 
 def create_subnet(event):
-    response = {}
+    response_body = {}
     try:
-        payload = json.loads(event['body'])['subnetPayload']
+        # payload = json.loads(event['body'])['subnetPayload']
         # uncomment below when testing from lambda console
-        # payload = event['body']['payload']
+        payload = event['body']['subnetPayload']
         cross_account_role_arn = payload['crossAccountRoleArn']
         is_public_only = payload['isPublicOnly']
         internet_access = payload['internetAccess']
@@ -104,6 +104,8 @@ def create_subnet(event):
         az = payload['az']
         public_subnet_name = payload['publicSubnetName']
         private_subnet_name = payload['privateSubnetName']
+        public_subnet_cidr = payload['publicSubnetCidr']
+        private_subnet_cidr = payload['privateSubnetCidr']
 
         # assume cross account role
         sts_client = boto3.client('sts')
@@ -129,7 +131,6 @@ def create_subnet(event):
             aws_session_token=response['Credentials']['SessionToken'],
             region_name=region
         )
-
         # getting public route table with id
         public_route_table = ec2.RouteTable(public_route_table_id)
 
@@ -138,7 +139,7 @@ def create_subnet(event):
 
         # creating a public subnet
         public_subnet = ec2.create_subnet(
-            CidrBlock='10.0.0.0/24', 
+            CidrBlock=public_subnet_cidr, 
             VpcId=vpc.id,
             TagSpecifications=[{
                 'ResourceType':'subnet',
@@ -149,13 +150,12 @@ def create_subnet(event):
         
         # associate the route table with the subnet
         public_route_table.associate_with_subnet(SubnetId=public_subnet.id)
-
-        response['publicSubnetId'] = public_subnet.id
+        response_body['publicSubnetId'] = public_subnet.id
         
         if (not is_public_only):
             # create private subnet
             private_subnet = ec2.create_subnet(
-                CidrBlock='10.0.1.0/24', 
+                CidrBlock=private_subnet_cidr, 
                 VpcId=vpc.id,
                 TagSpecifications=[{
                     'ResourceType':'subnet',
@@ -164,7 +164,7 @@ def create_subnet(event):
                 AvailabilityZone=az
             )
             
-            response['privateSubnetId'] = private_subnet.id
+            response_body['privateSubnetId'] = private_subnet.id
 
             if (internet_access):
                 # create nat instance for private subnet
@@ -187,15 +187,15 @@ def create_subnet(event):
                 # associate private route table with private subnet
                 private_route_table.associate_with_subnet(SubnetId=private_subnet.id)
         
-        response['message'] = "success"
+        response_body['message'] = "success"
 
     except Exception as e:
         print(e)
-        response = {
+        response_body = {
             "message": str(e)
         }
 
-    return response
+    return response_body
 
 def create_vpc(event):
     response = {}
