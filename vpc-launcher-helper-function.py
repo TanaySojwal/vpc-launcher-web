@@ -3,28 +3,33 @@ import boto3
 
 def lambda_handler(event, context):
     print(event)
-    
-    if (event['httpMethod'] == 'POST'):
-        response_body = processRequest(event)
-    else:
-        response_body = {}
+    response_body = {}
         
-    print(response_body)
-    
-    return {
-        'statusCode': 200,
-        'headers': {
-            "Access-Control-Allow-Origin": "*"
-        },
-        "body": json.dumps(response_body)
-    }
+    try:
+        response_body = processRequest(event)
+        return {
+            'statusCode': 200,
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
+            "body": json.dumps(response_body)
+        }
+    except Exception as e:
+        print(str(e))
+        return {
+            'statusCode': 200,
+            'headers': {
+                "Access-Control-Allow-Origin": "*"
+            },
+            "body": "internal server error"
+        }
     
 def processRequest(event):
     response_body = {}
     try:
-        # payload = json.loads(event['body'])
+        subnetPayload = event
         # uncomment below when testing from lambda console
-        subnetPayload = event['body']
+        # subnetPayload = event['body']
         payload = {
             "queryStringParameters": {
                 "action": "CREATE_SUBNET"

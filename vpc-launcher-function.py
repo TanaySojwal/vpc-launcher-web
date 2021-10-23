@@ -92,8 +92,6 @@ def describe_azs(event):
 def create_subnet(event):
     response_body = {}
     try:
-        # payload = json.loads(event['body'])['subnetPayload']
-        # uncomment below when testing from lambda console
         payload = event['body']['subnetPayload']
         cross_account_role_arn = payload['crossAccountRoleArn']
         is_public_only = payload['isPublicOnly']

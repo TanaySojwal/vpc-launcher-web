@@ -23,7 +23,7 @@ function createVPC() {
     const publicSubnetCheck = document.getElementById('public-subnet').checked
     const publicPrivateSubnetCheck = document.getElementById('public-private-subnet').checked
     const internetAccess = document.getElementById('private-subnet-internet').checked
-    const vpcName = document.getElementById('vpc-name').value
+    var vpcName = document.getElementById('vpc-name').value
     const region = document.getElementById('vpc-region').value
     const az = document.getElementById('vpc-az').value
     const enableIPv6 = document.getElementById('enable-ipv6').checked
@@ -79,7 +79,7 @@ function createVPC() {
                         alert("Invalid AZ value!")
                     }
                     var uuid = getUUID(5)
-                    vpcName = vpcName + uuid
+                    vpcName = vpcName.concat("-").concat(uuid)
 
                     printNextLog(`attempting to create VPC with name = ${vpcName} in region = ${region}`)
 
