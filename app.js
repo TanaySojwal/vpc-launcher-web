@@ -1,10 +1,21 @@
 const vpcLauncherAPIUrl = 'https://fs9gjfj2ei.execute-api.us-east-1.amazonaws.com/cert'
 const vpcLauncherHelper = 'https://0x7zt4osma.execute-api.us-east-1.amazonaws.com/cert'
+
+function getUUID(length) {
+    var result           = '';
+    var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    var charactersLength = characters.length;
+    for ( var i = 0; i < length; i++ ) {
+      result += characters.charAt(Math.floor(Math.random() * 
+ charactersLength));
+   }
+   return result;
+}
+
 function createVPC() {
 
     // hide submit button on submit to prevent resubmission
     document.getElementById("submit").style.display = "none"
-    document.getElementById("loader").style.display = "block"
 
     var xhr = new XMLHttpRequest()
 
@@ -67,6 +78,8 @@ function createVPC() {
                     } else {
                         alert("Invalid AZ value!")
                     }
+                    var uuid = getUUID(5)
+                    vpcName = vpcName + uuid
 
                     printNextLog(`attempting to create VPC with name = ${vpcName} in region = ${region}`)
 
@@ -87,11 +100,16 @@ function createVPC() {
                             
                             var vpcId = JSON.parse(xhr.response)['vpcId']
                             var publicRouteTableId = JSON.parse(xhr.response)['publicRouteTableId']
-                            return
+                            // return
+                            var i = 0
                             azList.forEach(az => {
                                 printNextLog(`attempting to create subnet in az = ${az}`)
-                                var publicSubnetName = `public-subnet-${az}`
-                                var privateSubnetName = `private-subnet-${az}`
+                                var publicSubnetName = `public-subnet-${az}-${uuid}`
+                                var privateSubnetName = `private-subnet-${az}-${uuid}`
+                                var publicSubnetCidr = `10.0.${i}.0/24`
+                                i += 1
+                                var privateSubnetCidr = `10.0.${i}.0/24`
+                                i += 1
                                 var subnetPayload = {
                                     crossAccountRoleArn,
                                     isPublicOnly,
@@ -106,7 +124,7 @@ function createVPC() {
                                     privateSubnetCidr
                                 }
                                 try {
-                                    xhr.open('POST', `${vpcLauncherAPIUrl}?action=CREATE_SUBNET`, true)
+                                    xhr.open('POST', `${vpcLauncherAPIUrl}/create-subnet`, true)
                                     xhr.send(JSON.stringify({subnetPayload}))
                                     xhr.onload = () => {
                                         printNextLog(`backend response > ${xhr.response}`)
@@ -121,7 +139,14 @@ function createVPC() {
                                     console.log(error.message);
                                 }
                             });
-
+                            printNextLog("Sleeping for 2 mins...")
+                            document.getElementById("loader").style.display = "block"
+                            setTimeout(() => {
+                                showReloadButton()
+                                document.getElementById("loader").style.display = "none"
+                                alert("Process completed.")
+                            }, 120000)
+                            
                             return
                         } else {
                             printNextLog("An error occurred while creating VPC!")
@@ -144,10 +169,18 @@ function createVPC() {
     return
 }
 
+function showReloadButton() {
+    document.getElementById("reload-button").style.display = "block"
+}
+
+function reloadPage() {
+    location.reload()
+}
+
 function printNextLog(content) {
     var logsContainer = document.getElementById("logs-container")
     var date = new Date()
-    logsContainer.innerHTML += `${date.toLocaleTimeString()} :: ${content}<br>`
+    logsContainer.innerHTML += `<b>${date.toLocaleTimeString()}</b> :: ${content}<br>`
 }
 
 function describeAllRegions() {
