@@ -94,7 +94,10 @@ function createVPC() {
                     }
                     xhr.open('POST', `${vpcLauncherAPIUrl}?action=CREATE_VPC`, true)
                     xhr.send(JSON.stringify({vpcPayload}))
+                    document.getElementById("loader").style.display = "block"
+                    printNextLog("Sleeping for 1 min while resources are ready...")
                     xhr.onload = () => {
+                        document.getElementById("loader").style.display = "none"
                         printNextLog(`backend response > ${xhr.response}`)
                         if (xhr.status == 200) {
                             
@@ -139,34 +142,44 @@ function createVPC() {
                                     console.log(error.message);
                                 }
                             });
-                            printNextLog("Sleeping for 2 mins...")
+
                             document.getElementById("loader").style.display = "block"
-                            setTimeout(() => {
-                                showReloadButton()
-                                document.getElementById("loader").style.display = "none"
-                                alert("Process completed.")
-                            }, 120000)
                             
-                            return
+                            sleep(60000)
+
+                            showReloadButton()
+                            document.getElementById("loader").style.display = "none"
+                            
+                            printNextLog(`Fetching subnets for vpcId = ${vpcId}`)
+                            xhr.open('GET', `${vpcLauncherAPIUrl}?action=GET_VPC_SUBNETS&crossAccountRoleArn=${crossAccountRoleArn}&region=${region}&vpcId=${vpcId}`, true)
+                            xhr.send()
+                            xhr.onload = () => {
+                                printNextLog(`backend response > ${xhr.response}`)
+                                printNextLog("Process completed.")
+
+                            }
+                        
                         } else {
                             printNextLog("An error occurred while creating VPC!")
-                            return
                         }
                     }
 
                 } else {
                     printNextLog("An error occurred while fetching AZs!")
-                    return
                 }
             }
         } else {
             printNextLog("An error occurred while adding cross account role policy to lambda execution role!")
-            return
         }
     }
+}
 
-    document.getElementById("loader").style.display = "none"
-    return
+function sleep(ms) {
+    const date = Date.now()
+    let currentDate = null
+    do {
+        currentDate = Date.now()
+    } while (currentDate - date < ms)
 }
 
 function showReloadButton() {

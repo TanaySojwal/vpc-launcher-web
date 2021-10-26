@@ -17,6 +17,8 @@ def lambda_handler(event, context):
             response_body = create_vpc(event)
         if event['queryStringParameters']['action'] == "ADD_CROSS_ACC_POLICY_TO_ROLE":
             response_body = add_cross_acc_policy_to_role(event)
+        if event['queryStringParameters']['action'] == "GET_VPC_SUBNETS":
+            response_body = get_vpc_subnets(event)
     print(response_body)
     return {
         'statusCode': 200,
@@ -25,6 +27,45 @@ def lambda_handler(event, context):
         },
         "body": json.dumps(response_body)
     }
+
+def get_vpc_subnets(event):
+    try:
+        # extract fields from request
+        vpc_id = event['queryStringParameters']['vpcId']
+        region = event['queryStringParameters']['region']
+        cross_account_role_arn = event['queryStringParameters']['crossAccountRoleArn']
+
+        # assume cross account role
+        sts_client = boto3.client('sts')
+        response = sts_client.assume_role(
+            RoleArn=cross_account_role_arn,
+            RoleSessionName='assume_role_session'
+        )
+        # create ec2 resource
+        ec2 = boto3.resource(
+            'ec2',
+            aws_access_key_id=response['Credentials']['AccessKeyId'],
+            aws_secret_access_key=response['Credentials']['SecretAccessKey'],
+            aws_session_token=response['Credentials']['SessionToken'],
+            region_name=region
+        )
+
+        vpc = ec2.Vpc(vpc_id)
+        subnets = []
+        for subnet in vpc.subnets.all():
+            print(subnet)
+            subnets.append(subnet.id)
+
+        return {
+            "subnets": subnets
+        }
+    except Exception as e:
+        message = str(e)
+        print(e)
+        return {
+            "message": message
+        }
+
 
 def add_cross_acc_policy_to_role(event):
     message = "success"
