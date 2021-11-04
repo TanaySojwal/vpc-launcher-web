@@ -7,14 +7,30 @@
         <link rel="stylesheet" href="main.css">
         <script type="text/javascript" src="app.js"></script>
     </head>
-    <body onload="describeAllRegions()">
+    <body onload="onPageLoad()">
         <form>
             <h1>VPC Launcher</h1>
             <hr>
             <h2>Access to AWS account</h2>
             <div>
+                <label>E-mail</label>
+                <input type="email" name="email" id="email" required>
+                <button type="button" name="email-submit" id="email-submit" onclick="describeARNs()">Submit</button>
+            </div>
+            <div>
                 <label>Cross account role ARN</label>
-                <input type="text" name="cross-account-role-arn" id="cross-account-role-arn" required>
+                <select name="cross-account-role-arn" id="cross-account-role-arn" onchange="onArnChange()">
+                    <option value="" selected="selected">Select a cross account role ARN</option>
+                    <option value="add-new">Add new</option>
+                </select>
+            </div>
+            <div style="display: none;" id="delete-arn-button-container">
+                <button type="button" name="arn-delete" id="arn-delete" onclick="deleteArnFromEmail()">Add ARN</button>
+            </div>
+            <div style="display: none;" id="add-new-arn-container">
+                <label>Add new ARN</label>
+                <input type="text" name="new-arn" id="new-arn">
+                <button type="button" name="arn-submit" id="arn-submit" onclick="addArnToEmail()">Add ARN</button>
             </div>
             <hr>
             <h2>VPC Type</h2>
@@ -59,7 +75,7 @@
             <h3>Process logs</h3>
             <div id="logs-container"></div>
             <div id="reload-button" style="display: none;">
-                <button type="button" name="button" id="submit" onclick="reloadPage()">Create another VPC</button>
+                <button type="button" name="reload-button" id="reload-button" onclick="reloadPage()">Create another VPC</button>
             </div>
             <div class="loader" id="loader" style="display: none;">
             </div>

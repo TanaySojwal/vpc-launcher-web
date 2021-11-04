@@ -1,5 +1,4 @@
 const vpcLauncherAPIUrl = 'https://fs9gjfj2ei.execute-api.us-east-1.amazonaws.com/cert'
-const vpcLauncherHelper = 'https://0x7zt4osma.execute-api.us-east-1.amazonaws.com/cert'
 
 function getUUID(length) {
     var result           = '';
@@ -194,6 +193,97 @@ function printNextLog(content) {
     var logsContainer = document.getElementById("logs-container")
     var date = new Date()
     logsContainer.innerHTML += `<b>${date.toLocaleTimeString()}</b> :: ${content}<br>`
+}
+
+function onPageLoad() {
+    // describeARNs()
+    describeAllRegions()
+}
+
+function onArnChange() {
+    const arnSelect = document.getElementById('cross-account-role-arn')
+    var addNewArnContainer = document.getElementById('add-new-arn-container')
+    var selectedArn = arnSelect.options[arnSelect.selectedIndex].value
+
+    if (selectedArn == ''){
+        // do nothing
+    } else if (selectedArn == 'add-new') {
+        // form for adding new ARN appears
+        addNewArnContainer.style.display = 'block'
+
+    } else {
+        // delete button appears as selected ARN is retrieved from backend
+        document.getElementById('delete-arn-button-container').style.display = 'block'
+    }
+
+}
+
+function deleteArnFromEmail() {
+    const arnSelect = document.getElementById('cross-account-role-arn')
+    var selectedArn = arnSelect.options[arnSelect.selectedIndex].value
+
+    if (selectedArn == "" || selectedArn == "add-new") {
+        alert("Cross account role ARN to delete is invalid!")
+        return
+    }
+
+    // delete ARN from email
+
+
+    // reload the page
+    reloadPage()
+}
+
+function addArnToEmail() {
+    // hiding add arn form once submitted
+    document.getElementById("add-new-arn-container").style.display = "none"
+
+    var newArn = document.getElementById('new-arn').value
+
+    if (newArn == "") {
+        document.getElementById("add-new-arn-container").style.display = "block"
+        alert("New cross account role ARN is invalid!")
+        return
+    }
+
+    // add ARN to email
+
+
+    // reload the page
+    reloadPage()
+}
+
+function describeARNs() {
+
+    var email = document.getElementById('email').value
+
+    if (email == '') {
+        alert("Email entered is invalid!")
+        return
+    }
+
+    var xhr = new XMLHttpRequest()
+    const arnSelect = document.getElementById('cross-account-role-arn')
+
+    xhr.open('GET', `${vpcLauncherAPIUrl}?action=DESCRIBE_ARNS_FOR_EMAIL`, true)
+    xhr.send()
+    xhr.onload = () => {
+        if (xhr.status == 200) {
+            // var result = JSON.parse(xhr.response)
+            // if (result['arnList'].length > 0) {
+            //     var length = arnSelect.options.length;
+            //     for (i = length - 1; i > 0; i--) {
+            //         arnSelect.options[i] = null;
+            //     }
+            //     var itr = 1
+            //     result['arnList'].forEach(element => {
+            //         arnSelect.options[itr++] = new Option(element, element)
+            //     })
+            // }
+        } else {
+            alert(`An error occurred while fetching regions!`)
+        }
+    }
 }
 
 function describeAllRegions() {
