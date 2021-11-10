@@ -207,13 +207,16 @@ function onArnChange() {
 
     if (selectedArn == ''){
         // do nothing
+        addNewArnContainer.style.display = 'none'
+        document.getElementById('delete-arn-button-container').style.display = 'none'
     } else if (selectedArn == 'add-new') {
         // form for adding new ARN appears
         addNewArnContainer.style.display = 'block'
-
+        document.getElementById('delete-arn-button-container').style.display = 'none'
     } else {
         // delete button appears as selected ARN is retrieved from backend
         document.getElementById('delete-arn-button-container').style.display = 'block'
+        addNewArnContainer.style.display = 'none'
     }
 
 }
@@ -221,14 +224,30 @@ function onArnChange() {
 function deleteArnFromEmail() {
     const arnSelect = document.getElementById('cross-account-role-arn')
     var selectedArn = arnSelect.options[arnSelect.selectedIndex].value
-
+    var email = document.getElementById("email").value
+    if (email == "") {
+        alert("Email is invalid!")
+        return
+    }
     if (selectedArn == "" || selectedArn == "add-new") {
         alert("Cross account role ARN to delete is invalid!")
         return
     }
 
     // delete ARN from email
-
+    var xhr = new XMLHttpRequest()
+    xhr.open('GET', `${vpcLauncherAPIUrl}?action=DELETE_ARN_FROM_EMAIL&email=${email}&arn=${selectedArn}`, false)
+    xhr.send()
+    xhr.onload = () => {
+        if (xhr.status == 200) {
+            var result = JSON.parse(xhr.response)
+            if (result['message'] == "success") {
+                alert(`ARN deleted successfully`)
+            }
+        } else {
+            alert(`An error occurred while fetching regions!`)
+        }
+    }
 
     // reload the page
     reloadPage()
@@ -237,9 +256,13 @@ function deleteArnFromEmail() {
 function addArnToEmail() {
     // hiding add arn form once submitted
     document.getElementById("add-new-arn-container").style.display = "none"
-
     var newArn = document.getElementById('new-arn').value
-
+    var email = document.getElementById("email").value
+    
+    if (email == "") {
+        alert("Email is invalid!")
+        return
+    }
     if (newArn == "") {
         document.getElementById("add-new-arn-container").style.display = "block"
         alert("New cross account role ARN is invalid!")
@@ -247,7 +270,19 @@ function addArnToEmail() {
     }
 
     // add ARN to email
-
+    var xhr = new XMLHttpRequest()
+    xhr.open('GET', `${vpcLauncherAPIUrl}?action=ADD_ARN_TO_EMAIL&email=${email}&arn=${newArn}`, false)
+    xhr.send()
+    xhr.onload = () => {
+        if (xhr.status == 200) {
+            var result = JSON.parse(xhr.response)
+            if (result['message'] == "success") {
+                alert(`ARN added successfully`)
+            }
+        } else {
+            alert(`An error occurred while fetching regions!`)
+        }
+    }
 
     // reload the page
     reloadPage()
@@ -263,23 +298,24 @@ function describeARNs() {
     }
 
     var xhr = new XMLHttpRequest()
-    const arnSelect = document.getElementById('cross-account-role-arn')
+    var arnSelect = document.getElementById('cross-account-role-arn')
 
     xhr.open('GET', `${vpcLauncherAPIUrl}?action=DESCRIBE_ARNS_FOR_EMAIL&email=${email}`, true)
     xhr.send()
     xhr.onload = () => {
         if (xhr.status == 200) {
-            // var result = JSON.parse(xhr.response)
-            // if (result['arnList'].length > 0) {
-            //     var length = arnSelect.options.length;
-            //     for (i = length - 1; i > 0; i--) {
-            //         arnSelect.options[i] = null;
-            //     }
-            //     var itr = 1
-            //     result['arnList'].forEach(element => {
-            //         arnSelect.options[itr++] = new Option(element, element)
-            //     })
-            // }
+            var result = JSON.parse(xhr.response)
+            if (result['arns'].length > 0) {
+                var length = arnSelect.options.length;
+                for (i = length - 1; i > 0; i--) {
+                    arnSelect.options[i] = null;
+                }
+                var itr = 1
+                arnSelect.options[itr++] = new Option("Add new", "add-new")
+                result['arns'].forEach(element => {
+                    arnSelect.options[itr++] = new Option(element, element)    
+                })
+            }
         } else {
             alert(`An error occurred while fetching regions!`)
         }
