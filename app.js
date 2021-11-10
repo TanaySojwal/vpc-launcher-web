@@ -265,7 +265,7 @@ function describeARNs() {
     var xhr = new XMLHttpRequest()
     const arnSelect = document.getElementById('cross-account-role-arn')
 
-    xhr.open('GET', `${vpcLauncherAPIUrl}?action=DESCRIBE_ARNS_FOR_EMAIL`, true)
+    xhr.open('GET', `${vpcLauncherAPIUrl}?action=DESCRIBE_ARNS_FOR_EMAIL&email=${email}`, true)
     xhr.send()
     xhr.onload = () => {
         if (xhr.status == 200) {

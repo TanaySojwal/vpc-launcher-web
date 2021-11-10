@@ -19,6 +19,12 @@ def lambda_handler(event, context):
             response_body = add_cross_acc_policy_to_role(event)
         if event['queryStringParameters']['action'] == "GET_VPC_SUBNETS":
             response_body = get_vpc_subnets(event)
+        if event['queryStringParameters']['action'] == "DESCRIBE_ARNS_FOR_EMAIL":
+            response_body = describe_arns_for_email(event)
+        if event['queryStringParameters']['action'] == "ADD_ARN_TO_EMAIL":
+            response_body = add_arn_to_email(event)
+        if event['queryStringParameters']['action'] == "DELETE_ARN_FROM_EMAIL":
+            response_body = delete_arn_from_email(event)
     print(response_body)
     return {
         'statusCode': 200,
@@ -27,6 +33,150 @@ def lambda_handler(event, context):
         },
         "body": json.dumps(response_body)
     }
+
+def delete_arn_from_email(event):
+    try:
+        email = event['queryStringParameters']['email']
+        arn = event['queryStringParameters']['arn']
+        
+        arns = []
+        
+        client = boto3.client('dynamodb')
+        
+        response = client.get_item(
+            TableName='cross-account-roles_vpc-launcher',
+            Key={
+                'users':{
+                    'S': email
+                }
+            }
+        )
+        
+        print(response)
+        
+        if 'Item' in response and 'cross-account-arns' in response['Item']:
+            arns = response['Item']['cross-account-arns']['SS']
+        
+        arns.remove(arn)
+        
+        response = client.update_item(
+            TableName='cross-account-roles_vpc-launcher',
+            Key={
+                'users': {
+                    'S': email
+                }
+            },
+            AttributeUpdates={
+                'cross-account-arns': {
+                    'Value': {
+                        'SS': arns
+                    }
+                }
+            }
+        )
+        
+        print(response)
+        
+        return {
+            "message": "success"
+        }
+    except Exception as e:
+        message = str(e)
+        print(e)
+        return {
+            "message": message
+        }
+
+def add_arn_to_email(event):
+    try:
+        email = event['queryStringParameters']['email']
+        arn = event['queryStringParameters']['arn']
+        
+        arns = []
+        
+        client = boto3.client('dynamodb')
+        
+        response = client.get_item(
+            TableName='cross-account-roles_vpc-launcher',
+            Key={
+                'users':{
+                    'S': email
+                }
+            }
+        )
+        
+        print(response)
+        
+        if 'Item' in response and 'cross-account-arns' in response['Item']:
+            arns = response['Item']['cross-account-arns']['SS']
+        
+        if arn not in arns:
+            arns.append(arn)
+        
+        response = client.update_item(
+            TableName='cross-account-roles_vpc-launcher',
+            Key={
+                'users': {
+                    'S': email
+                }
+            },
+            AttributeUpdates={
+                'cross-account-arns': {
+                    'Value': {
+                        'SS': arns
+                    }
+                }
+            }
+        )
+        
+        print(response)
+        
+        return {
+            "message": "success"
+        }
+    except Exception as e:
+        message = str(e)
+        print(e)
+        return {
+            "message": message
+        }
+
+def describe_arns_for_email(event):
+    try:
+        email = event['queryStringParameters']['email']
+        arns = []
+        
+        client = boto3.client('dynamodb')
+        
+        response = client.get_item(
+            TableName='cross-account-roles_vpc-launcher',
+            Key={
+                'users':{
+                    'S': email
+                }
+            }
+        )
+        print(response)
+        if 'Item' in response and 'cross-account-arns' in response['Item']:
+            arns = response['Item']['cross-account-arns']['SS']
+        else:
+            client.put_item(
+                TableName='cross-account-roles_vpc-launcher',
+                Item={
+                    'users':{
+                        'S': email
+                    }
+                }
+            )
+        return {
+            "arns": arns
+        }
+    except Exception as e:
+        message = str(e)
+        print(e)
+        return {
+            "message": message
+        }
 
 def get_vpc_subnets(event):
     try:
