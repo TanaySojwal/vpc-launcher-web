@@ -26,9 +26,15 @@ function createVPC() {
     const region = document.getElementById('vpc-region').value
     const az = document.getElementById('vpc-az').value
     const enableIPv6 = document.getElementById('enable-ipv6').checked
+    var email = document.getElementById("email").value
 
     const isPublicOnly = publicSubnetCheck == true ? true : false
 
+    if (email == "") {
+        document.getElementById("submit").style.display = "block"
+        alert("Email is invalid!")
+        return
+    }
     if (crossAccountRoleArn == "") {
         document.getElementById("submit").style.display = "block"
         alert("Cross account role ARN is invalid!")
@@ -89,7 +95,8 @@ function createVPC() {
                         vpcName,
                         region,
                         // az,
-                        enableIPv6
+                        enableIPv6,
+                        email
                     }
                     xhr.open('POST', `${vpcLauncherAPIUrl}?action=CREATE_VPC`, true)
                     xhr.send(JSON.stringify({vpcPayload}))
@@ -154,6 +161,7 @@ function createVPC() {
                             xhr.send()
                             xhr.onload = () => {
                                 printNextLog(`backend response > ${xhr.response}`)
+                                // Detach and delete policy from role here...
                                 printNextLog("Process completed.")
 
                             }
