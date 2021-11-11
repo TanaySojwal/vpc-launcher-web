@@ -162,8 +162,17 @@ function createVPC() {
                             xhr.onload = () => {
                                 printNextLog(`backend response > ${xhr.response}`)
                                 // Detach and delete policy from role here...
-                                printNextLog("Process completed.")
+                                printNextLog(`Detaching and delete Cross Account Role Policy from Lambda role`)
 
+
+                                xhr.open('GET', `${vpcLauncherAPIUrl}?action=DELETE_CROSS_ACC_POLICY_FROM_ROLE`, true)
+                                xhr.send()
+                                xhr.onload = () => {
+                                    printNextLog(`backend response > ${xhr.response}`)
+                                    // Detach and delete policy from role here...
+                                    printNextLog("Process completed.")
+
+                                }
                             }
                         
                         } else {

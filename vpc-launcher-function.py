@@ -1,5 +1,6 @@
 import json
 import boto3
+import botocore
 
 def lambda_handler(event, context):
     print(event)
@@ -25,6 +26,8 @@ def lambda_handler(event, context):
             response_body = add_arn_to_email(event)
         if event['queryStringParameters']['action'] == "DELETE_ARN_FROM_EMAIL":
             response_body = delete_arn_from_email(event)
+        if event['queryStringParameters']['action'] == "DELETE_CROSS_ACC_POLICY_FROM_ROLE":
+            response_body = delete_cross_acc_policy_from_role(event)
     print(response_body)
     return {
         'statusCode': 200,
@@ -33,6 +36,70 @@ def lambda_handler(event, context):
         },
         "body": json.dumps(response_body)
     }
+
+def delete_cross_acc_policy_from_role(event):
+    # get detach policy from role
+    # delete policy
+    client = boto3.client('iam')
+        
+    policyArn = 'arn:aws:iam::239547938232:policy/MyCrossAccountRolePolicy'
+
+    try:
+        response = client.detach_role_policy(
+            RoleName='vpc-launcher-role',
+            PolicyArn=policyArn
+        )
+        print(response)
+        response = client.delete_policy(
+            PolicyArn=policyArn
+        )
+        print(response)
+        return {
+            "message": "success"
+        }
+    except Exception as e:
+        message = str(e)
+        print(e)
+        return {
+            "message": message
+        }
+
+def add_cross_acc_policy_to_role(event):
+    try:
+        iam = boto3.client('iam')
+        cross_account_role_arn = event['queryStringParameters']['crossAccountRoleArn']
+        my_managed_policy = {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Action": [
+                        "sts:AssumeRole"
+                    ],
+                    "Resource": [
+                        cross_account_role_arn
+                    ]
+                }
+            ]
+        }
+        response = iam.create_policy(
+            PolicyName='MyCrossAccountRolePolicy',
+            PolicyDocument=json.dumps(my_managed_policy)
+        )
+        policyArn = response['Policy']['Arn']
+        iam.attach_role_policy(
+            RoleName='vpc-launcher-role',
+            PolicyArn=policyArn
+        )
+        return {
+            "message": "success"
+        }
+    except Exception as e:
+        message = str(e)
+        print(e)
+        return {
+            "message": message
+        }
 
 def delete_arn_from_email(event):
     try:
@@ -216,42 +283,6 @@ def get_vpc_subnets(event):
             "message": message
         }
 
-
-def add_cross_acc_policy_to_role(event):
-    message = "success"
-    try:
-        iam = boto3.client('iam')
-        cross_account_role_arn = event['queryStringParameters']['crossAccountRoleArn']
-        my_managed_policy = {
-            "Version": "2012-10-17",
-            "Statement": [
-                {
-                    "Effect": "Allow",
-                    "Action": [
-                        "sts:AssumeRole"
-                    ],
-                    "Resource": [
-                        cross_account_role_arn
-                    ]
-                }
-            ]
-        }
-        response = iam.create_policy(
-            PolicyName='MyCrossAccountRolePolicy',
-            PolicyDocument=json.dumps(my_managed_policy)
-        )
-        policyArn = response['Policy']['Arn']
-        iam.attach_role_policy(
-            RoleName='vpc-launcher-role',
-            PolicyArn=policyArn
-        )
-    except Exception as e:
-        message = str(e)
-        print(e)
-    return {
-        "message": message
-    }
-
 def describe_regions(event):
     client = boto3.client('ec2')
     regionList = []
@@ -397,6 +428,7 @@ def create_vpc(event):
         enable_IPv6 = True if payload['enableIPv6'] else False
         vpc_name = payload['vpcName']
         region = payload['region']
+        email = payload['email']
         
         # assume cross account role
         sts_client = boto3.client('sts')
@@ -430,7 +462,10 @@ def create_vpc(event):
             AmazonProvidedIpv6CidrBlock=enable_IPv6,
             TagSpecifications=[{
                 'ResourceType':'vpc',
-                'Tags':[{'Key': 'Name', 'Value':vpc_name}]
+                'Tags':[
+                    {'Key': 'Name', 'Value': vpc_name},
+                    {'Key': 'user', 'Value': email}
+                ]
             }]
         )
         vpc.wait_until_available()
