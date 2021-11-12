@@ -273,6 +273,23 @@ def get_vpc_subnets(event):
             print(subnet)
             subnets.append(subnet.id)
 
+        # # get detach policy from role
+        # # delete policy
+        # iam_client = boto3.client('iam')
+            
+        # policyArn = 'arn:aws:iam::239547938232:policy/MyCrossAccountRolePolicy'
+    
+        # iam_response = iam_client.detach_role_policy(
+        #     RoleName='vpc-launcher-role',
+        #     PolicyArn=policyArn
+        # )
+        # print(iam_response)
+        
+        # iam_response = iam_client.delete_policy(
+        #     PolicyArn=policyArn
+        # )
+        # print(iam_response)
+        
         return {
             "subnets": subnets
         }

@@ -66,6 +66,9 @@ function createVPC() {
     xhr.open('GET', `${vpcLauncherAPIUrl}?action=ADD_CROSS_ACC_POLICY_TO_ROLE&crossAccountRoleArn=${crossAccountRoleArn}`, true)
     xhr.send()
     xhr.onload = () => {
+
+        sleep(5000)
+
         if (xhr.status == 200) {
             printNextLog(`backend response > ${xhr.response}`)
             
@@ -154,6 +157,8 @@ function createVPC() {
                             sleep(60000)
 
                             showReloadButton()
+                            showDeletePolicyButton()
+                            
                             document.getElementById("loader").style.display = "none"
                             
                             printNextLog(`Fetching subnets for vpcId = ${vpcId}`)
@@ -161,18 +166,12 @@ function createVPC() {
                             xhr.send()
                             xhr.onload = () => {
                                 printNextLog(`backend response > ${xhr.response}`)
-                                // Detach and delete policy from role here...
-                                printNextLog(`Detaching and delete Cross Account Role Policy from Lambda role`)
-
-
-                                xhr.open('GET', `${vpcLauncherAPIUrl}?action=DELETE_CROSS_ACC_POLICY_FROM_ROLE`, true)
-                                xhr.send()
-                                xhr.onload = () => {
-                                    printNextLog(`backend response > ${xhr.response}`)
-                                    // Detach and delete policy from role here...
+                                if (xhr.status == 200) {
                                     printNextLog("Process completed.")
-
+                                } else {
+                                    printNextLog("An error occurred while fetching subnets!")
                                 }
+                                
                             }
                         
                         } else {
@@ -200,6 +199,28 @@ function sleep(ms) {
 
 function showReloadButton() {
     document.getElementById("reload-button").style.display = "block"
+}
+
+function showDeletePolicyButton() {
+    document.getElementById("delete-policy-button").style.display = "block"
+}
+
+function deletePolicyFromRole() {
+    // Detach and delete policy from role here...
+    printNextLog(`Detaching and delete Cross Account Role Policy from Lambda role`)
+
+    var xhr = new XMLHttpRequest()
+
+    xhr.open('GET', `${vpcLauncherAPIUrl}?action=DELETE_CROSS_ACC_POLICY_FROM_ROLE`, true)
+    xhr.send()
+    xhr.onload = () => {
+        printNextLog(`backend response > ${xhr.response}`)
+        if (xhr.status == 200) {
+            printNextLog("Policy detached and deleted successfully.")
+        } else {
+            printNextLog('An error occurred while deleting policy.')
+        }
+    }
 }
 
 function reloadPage() {
