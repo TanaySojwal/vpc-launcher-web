@@ -61,13 +61,15 @@ function createVPC() {
         return
     }
 
-    printNextLog("attempting to add cross account role ARN to lambda policy if not done already.")
-
+    printNextLog("attempting to add cross account role ARN to lambda policy if not done already")
+    printNextLog("sleeping for 20 seconds while policy changes are propagated...")
     xhr.open('GET', `${vpcLauncherAPIUrl}?action=ADD_CROSS_ACC_POLICY_TO_ROLE&crossAccountRoleArn=${crossAccountRoleArn}`, true)
     xhr.send()
     xhr.onload = () => {
-
-        sleep(5000)
+        
+        document.getElementById("loader").style.display = "block"
+        sleep(20000)
+        document.getElementById("loader").style.display = "none"
 
         if (xhr.status == 200) {
             printNextLog(`backend response > ${xhr.response}`)
@@ -104,7 +106,7 @@ function createVPC() {
                     xhr.open('POST', `${vpcLauncherAPIUrl}?action=CREATE_VPC`, true)
                     xhr.send(JSON.stringify({vpcPayload}))
                     document.getElementById("loader").style.display = "block"
-                    printNextLog("Sleeping for 1 min while resources are ready...")
+                    printNextLog("sleeping for 1 min while resources are ready...")
                     xhr.onload = () => {
                         document.getElementById("loader").style.display = "none"
                         printNextLog(`backend response > ${xhr.response}`)
@@ -157,17 +159,18 @@ function createVPC() {
                             sleep(60000)
 
                             showReloadButton()
-                            showDeletePolicyButton()
+                            // showDeletePolicyButton()
                             
                             document.getElementById("loader").style.display = "none"
                             
-                            printNextLog(`Fetching subnets for vpcId = ${vpcId}`)
+                            printNextLog(`fetching subnets for vpcId = ${vpcId}`)
                             xhr.open('GET', `${vpcLauncherAPIUrl}?action=GET_VPC_SUBNETS&crossAccountRoleArn=${crossAccountRoleArn}&region=${region}&vpcId=${vpcId}`, true)
                             xhr.send()
                             xhr.onload = () => {
                                 printNextLog(`backend response > ${xhr.response}`)
                                 if (xhr.status == 200) {
-                                    printNextLog("Process completed.")
+                                    deletePolicyFromRole()
+                                    // printNextLog("process completed.")
                                 } else {
                                     printNextLog("An error occurred while fetching subnets!")
                                 }
@@ -207,7 +210,7 @@ function showDeletePolicyButton() {
 
 function deletePolicyFromRole() {
     // Detach and delete policy from role here...
-    printNextLog(`Detaching and delete Cross Account Role Policy from Lambda role`)
+    printNextLog(`detaching and delete Cross Account Role Policy from Lambda role`)
 
     var xhr = new XMLHttpRequest()
 
@@ -216,7 +219,8 @@ function deletePolicyFromRole() {
     xhr.onload = () => {
         printNextLog(`backend response > ${xhr.response}`)
         if (xhr.status == 200) {
-            printNextLog("Policy detached and deleted successfully.")
+            printNextLog("policy detached and deleted successfully")
+            printNextLog("process completed!")
         } else {
             printNextLog('An error occurred while deleting policy.')
         }
