@@ -12,25 +12,47 @@
             <h1>VPC Launcher</h1>
             <hr>
             <h2>Access to AWS account</h2>
+            <!-- Email input -->
             <div>
                 <label>E-mail</label>
                 <input type="email" name="email" id="email" required>
-                <button type="button" name="email-submit" id="email-submit" onclick="describeARNs()">Submit</button>
+                <button type="button" name="email-submit" id="email-submit" onclick="onEmailChange()">Submit</button>
             </div>
+            <!-- Cross account role ARN input -->
             <div>
                 <label>Cross account role ARN</label>
                 <select name="cross-account-role-arn" id="cross-account-role-arn" onchange="onArnChange()">
                     <option value="" selected="selected">Select a cross account role ARN</option>
-                    <option value="add-new">Add new</option>
+                    <option value="add-new-arn">Add new ARN</option>
                 </select>
             </div>
+            <!-- Delete ARN -->
             <div style="display: none;" id="delete-arn-button-container">
                 <button type="button" name="arn-delete" id="arn-delete" onclick="deleteArnFromEmail()">Delete ARN</button>
             </div>
+            <!-- New ARN -->
             <div style="display: none;" id="add-new-arn-container">
                 <label>Add new ARN</label>
                 <input type="text" name="new-arn" id="new-arn">
                 <button type="button" name="arn-submit" id="arn-submit" onclick="addArnToEmail()">Add ARN</button>
+            </div>
+            <!-- Workspace input -->
+            <div>
+                <label>Workspace</label>
+                <select name="workspace" id="workspace" onchange="onWorkspaceChange()">
+                    <option value="" selected="selected">Select workspace</option>
+                    <option value="add-new-workspace">Add new workspace</option>
+                </select>
+            </div>
+            <!-- Delete workspace -->
+            <div style="display: none;" id="delete-workspace-button-container">
+                <button type="button" name="workspace-delete" id="workspace-delete" onclick="deleteWorkspaceFromEmail()">Delete workspace</button>
+            </div>
+            <!-- New workspace -->
+            <div style="display: none;" id="add-new-workspace-container">
+                <label>Add new workspace</label>
+                <input type="text" name="new-workspace" id="new-workspace">
+                <button type="button" name="workspace-submit" id="workspace-submit" onclick="addWorkspaceToEmail()">Add workspace</button>
             </div>
             <hr>
             <h2>VPC Type</h2>

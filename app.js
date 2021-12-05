@@ -238,7 +238,6 @@ function printNextLog(content) {
 }
 
 function onPageLoad() {
-    // describeARNs()
     describeAllRegions()
 }
 
@@ -247,11 +246,11 @@ function onArnChange() {
     var addNewArnContainer = document.getElementById('add-new-arn-container')
     var selectedArn = arnSelect.options[arnSelect.selectedIndex].value
 
-    if (selectedArn == ''){
+    if (selectedArn == '') {
         // do nothing
         addNewArnContainer.style.display = 'none'
         document.getElementById('delete-arn-button-container').style.display = 'none'
-    } else if (selectedArn == 'add-new') {
+    } else if (selectedArn == 'add-new-arn') {
         // form for adding new ARN appears
         addNewArnContainer.style.display = 'block'
         document.getElementById('delete-arn-button-container').style.display = 'none'
@@ -263,6 +262,23 @@ function onArnChange() {
 
 }
 
+function onWorkspaceChange() {
+    const workspaceSelect = document.getElementById('workspace')
+    var addNewWorkspaceContainer = document.getElementById('add-new-workspace-container')
+    var selectedWorkspace = workspaceSelect.options[workspaceSelect.selectedIndex].value
+
+    if (selectedWorkspace == '') {
+        addNewWorkspaceContainer.style.display = 'none'
+        document.getElementById('delete-workspace-button-container').style.display = 'none'
+    } else if (selectedWorkspace == 'add-new-workspace') {
+        addNewWorkspaceContainer.style.display = 'block'
+        document.getElementById('delete-workspace-button-container').style.display = 'none'
+    } else {
+        document.getElementById('delete-workspace-button-container').style.display = 'block'
+        addNewWorkspaceContainer.style.display = 'none'
+    }
+}
+
 function deleteArnFromEmail() {
     const arnSelect = document.getElementById('cross-account-role-arn')
     var selectedArn = arnSelect.options[arnSelect.selectedIndex].value
@@ -271,7 +287,7 @@ function deleteArnFromEmail() {
         alert("Email is invalid!")
         return
     }
-    if (selectedArn == "" || selectedArn == "add-new") {
+    if (selectedArn == "" || selectedArn == "add-new-arn") {
         alert("Cross account role ARN to delete is invalid!")
         return
     }
@@ -285,6 +301,38 @@ function deleteArnFromEmail() {
             var result = JSON.parse(xhr.response)
             if (result['message'] == "success") {
                 alert(`ARN deleted successfully`)
+            }
+        } else {
+            alert(`An error occurred while fetching regions!`)
+        }
+    }
+
+    // reload the page
+    reloadPage()
+}
+
+function deleteWorkspaceFromEmail() {
+    const workspaceSelect = document.getElementById('workspace')
+    var selectedWorkspace = workspaceSelect.options[workspaceSelect.selectedIndex].value
+    var email = document.getElementById("email").value
+    if (email == "") {
+        alert("Email is invalid!")
+        return
+    }
+    if (selectedWorkspace == "" || selectedWorkspace == "add-new-workspace") {
+        alert("Workspace to delete is invalid!")
+        return
+    }
+
+    // delete workspace from email
+    var xhr = new XMLHttpRequest()
+    xhr.open('GET', `${vpcLauncherAPIUrl}?action=DELETE_WKSPCS_FROM_EMAIL&email=${email}&workspace=${selectedWorkspace}`, false)
+    xhr.send()
+    xhr.onload = () => {
+        if (xhr.status == 200) {
+            var result = JSON.parse(xhr.response)
+            if (result['message'] == "success") {
+                alert(`Workspace deleted successfully`)
             }
         } else {
             alert(`An error occurred while fetching regions!`)
@@ -330,6 +378,79 @@ function addArnToEmail() {
     reloadPage()
 }
 
+function addWorkspaceToEmail() {
+    // hiding add workspace form once submitted
+    document.getElementById("add-new-workspace-container").style.display = "none"
+    var newWorkspace = document.getElementById('new-workspace').value
+    var email = document.getElementById("email").value
+    
+    if (email == "") {
+        alert("Email is invalid!")
+        return
+    }
+    if (newWorkspace == "") {
+        document.getElementById("add-new-workspace-container").style.display = "block"
+        alert("New cross account role workspace is invalid!")
+        return
+    }
+
+    // add workspace to email
+    var xhr = new XMLHttpRequest()
+    xhr.open('GET', `${vpcLauncherAPIUrl}?action=ADD_WKSPCS_TO_EMAIL&email=${email}&workspace=${newWorkspace}`, false)
+    xhr.send()
+    xhr.onload = () => {
+        if (xhr.status == 200) {
+            var result = JSON.parse(xhr.response)
+            if (result['message'] == "success") {
+                alert(`Workspace added successfully`)
+            }
+        } else {
+            alert(`An error occurred while fetching regions!`)
+        }
+    }
+
+    // reload the page
+    reloadPage()
+}
+
+function onEmailChange() {
+    describeARNs()
+    describeWorkspaces()
+}
+
+function describeWorkspaces() {
+    var email = document.getElementById('email').value
+
+    if (email == '') {
+        alert("Email entered is invalid!")
+        return
+    }
+
+    var xhr = new XMLHttpRequest()
+    var workspaceSelect = document.getElementById('workspace')
+
+    xhr.open('GET', `${vpcLauncherAPIUrl}?action=DESCRIBE_WKSPCS_FOR_EMAIL&email=${email}`, true)
+    xhr.send()
+    xhr.onload = () => {
+        if (xhr.status == 200) {
+            var result = JSON.parse(xhr.response)
+            if (result['workspaces'].length > 0) {
+                var length = workspaceSelect.options.length;
+                for (i = length - 1; i > 0; i--) {
+                    workspaceSelect.options[i] = null;
+                }
+                var itr = 1
+                workspaceSelect.options[itr++] = new Option("Add new workspace", "add-new-workspace")
+                result['workspaces'].forEach(element => {
+                    workspaceSelect.options[itr++] = new Option(element, element)    
+                })
+            }
+        } else {
+            alert(`An error occurred while fetching workspaces!`)
+        }
+    }
+}
+
 function describeARNs() {
 
     var email = document.getElementById('email').value
@@ -353,13 +474,13 @@ function describeARNs() {
                     arnSelect.options[i] = null;
                 }
                 var itr = 1
-                arnSelect.options[itr++] = new Option("Add new", "add-new")
+                arnSelect.options[itr++] = new Option("Add new ARN", "add-new-arn")
                 result['arns'].forEach(element => {
                     arnSelect.options[itr++] = new Option(element, element)    
                 })
             }
         } else {
-            alert(`An error occurred while fetching regions!`)
+            alert(`An error occurred while fetching arns!`)
         }
     }
 }
