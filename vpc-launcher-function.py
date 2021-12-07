@@ -28,6 +28,12 @@ def lambda_handler(event, context):
             response_body = delete_arn_from_email(event)
         if event['queryStringParameters']['action'] == "DELETE_CROSS_ACC_POLICY_FROM_ROLE":
             response_body = delete_cross_acc_policy_from_role(event)
+        if event['queryStringParameters']['action'] == "DESCRIBE_WKSPCS_FOR_EMAIL":
+            response_body = describe_workspaces_for_email(event)
+        if event['queryStringParameters']['action'] == "ADD_WKSPCS_TO_EMAIL":
+            response_body = add_workspace_to_email(event)
+        if event['queryStringParameters']['action'] == "DELETE_WKSPCS_FROM_EMAIL":
+            response_body = delete_workspace_from_email(event)
     print(response_body)
     return {
         'statusCode': 200,
@@ -101,6 +107,52 @@ def add_cross_acc_policy_to_role(event):
             "message": message
         }
 
+def delete_workspace_from_email(event):
+    try:
+        email = event['queryStringParameters']['email']
+        arn = event['queryStringParameters']['arn']
+        workspace = event['queryStringParameters']['workspace']
+        
+        client = boto3.client('dynamodb')
+        
+        response = client.delete_item(
+            TableName='workspaces_vpc-launcher',
+            Key={
+                'workspace': {
+                    'S': workspace
+                },
+                'email': {
+                    'S': email
+                }
+            },
+            ConditionExpression='email=:email',
+            ExpressionAttributeValues={
+                ':email': {'S':email}
+            }
+        )
+        
+        response = client.delete_item(
+            TableName='next-cidr_vpc-launcher',
+            Key={
+                'workspace': {
+                    'S': workspace
+                }
+            },
+            ConditionExpression='arn=:arn',
+            ExpressionAttributeValues={
+                ':arn': {'S':arn}
+            }
+        )
+        return {
+            "message": "success"
+        }
+    except Exception as e:
+        message = str(e)
+        print(e)
+        return {
+            "message": message
+        }
+
 def delete_arn_from_email(event):
     try:
         email = event['queryStringParameters']['email']
@@ -143,6 +195,51 @@ def delete_arn_from_email(event):
         )
         
         print(response)
+        
+        return {
+            "message": "success"
+        }
+    except Exception as e:
+        message = str(e)
+        print(e)
+        return {
+            "message": message
+        }
+
+def add_workspace_to_email(event):
+    try:
+        email = event['queryStringParameters']['email']
+        arn = event['queryStringParameters']['arn']
+        workspace = event['queryStringParameters']['workspace']
+        
+        client = boto3.client('dynamodb')
+        
+        response = client.put_item(
+                TableName='workspaces_vpc-launcher',
+                Item={
+                    'workspace': {
+                        'S': workspace
+                    },
+                    'arn': {
+                        'S': arn
+                    },
+                    'email': {
+                        'S': email
+                    }
+                }
+            )
+        
+        response = client.put_item(
+                TableName='next-cidr_vpc-launcher',
+                Item={
+                    'workspace': {
+                        'S': workspace
+                    },
+                    'arn': {
+                        'S': arn
+                    }
+                }
+            )
         
         return {
             "message": "success"
@@ -200,6 +297,41 @@ def add_arn_to_email(event):
         
         return {
             "message": "success"
+        }
+    except Exception as e:
+        message = str(e)
+        print(e)
+        return {
+            "message": message
+        }
+
+def describe_workspaces_for_email(event):
+    try:
+        email = event['queryStringParameters']['email']
+        arn = event['queryStringParameters']['arn']
+        
+        workspaces = []
+        
+        client = boto3.client('dynamodb')
+        
+        response = client.query(
+            TableName='workspaces_vpc-launcher',
+            IndexName='email-arn-index',
+            KeyConditionExpression='email=:email AND arn=:arn',
+            ExpressionAttributeValues={
+                ':email': {'S': email},
+                ':arn': {'S': arn}
+            }
+        )
+        
+        print(response)
+        
+        if 'Items' in response:
+            for workspace in response['Items']:
+                workspaces.append(workspace['workspace']['S'])
+
+        return {
+            "workspaces": workspaces
         }
     except Exception as e:
         message = str(e)

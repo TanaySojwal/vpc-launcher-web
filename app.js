@@ -315,6 +315,10 @@ function deleteWorkspaceFromEmail() {
     const workspaceSelect = document.getElementById('workspace')
     var selectedWorkspace = workspaceSelect.options[workspaceSelect.selectedIndex].value
     var email = document.getElementById("email").value
+    var arn = document.getElementById('cross-account-role-arn').value
+    if (arn == '') {
+        alert("ARN entered is invalid!")
+    }
     if (email == "") {
         alert("Email is invalid!")
         return
@@ -326,7 +330,7 @@ function deleteWorkspaceFromEmail() {
 
     // delete workspace from email
     var xhr = new XMLHttpRequest()
-    xhr.open('GET', `${vpcLauncherAPIUrl}?action=DELETE_WKSPCS_FROM_EMAIL&email=${email}&workspace=${selectedWorkspace}`, false)
+    xhr.open('GET', `${vpcLauncherAPIUrl}?action=DELETE_WKSPCS_FROM_EMAIL&email=${email}&workspace=${selectedWorkspace}&arn=${arn}`, false)
     xhr.send()
     xhr.onload = () => {
         if (xhr.status == 200) {
@@ -383,20 +387,26 @@ function addWorkspaceToEmail() {
     document.getElementById("add-new-workspace-container").style.display = "none"
     var newWorkspace = document.getElementById('new-workspace').value
     var email = document.getElementById("email").value
+    var arn = document.getElementById('cross-account-role-arn').value
     
     if (email == "") {
         alert("Email is invalid!")
         return
     }
+
+    if (arn == '') {
+        alert("ARN entered is invalid!")
+    }
+
     if (newWorkspace == "") {
         document.getElementById("add-new-workspace-container").style.display = "block"
-        alert("New cross account role workspace is invalid!")
+        alert("Workspace is invalid!")
         return
     }
 
     // add workspace to email
     var xhr = new XMLHttpRequest()
-    xhr.open('GET', `${vpcLauncherAPIUrl}?action=ADD_WKSPCS_TO_EMAIL&email=${email}&workspace=${newWorkspace}`, false)
+    xhr.open('GET', `${vpcLauncherAPIUrl}?action=ADD_WKSPCS_TO_EMAIL&email=${email}&workspace=${newWorkspace}&arn=${arn}`, false)
     xhr.send()
     xhr.onload = () => {
         if (xhr.status == 200) {
@@ -420,10 +430,15 @@ function onEmailChange() {
 
 function describeWorkspaces() {
     var email = document.getElementById('email').value
+    var arn = document.getElementById('cross-account-role-arn').value
 
     if (email == '') {
         alert("Email entered is invalid!")
         return
+    }
+
+    if (arn == '') {
+        alert("ARN entered is invalid!")
     }
 
     var xhr = new XMLHttpRequest()
