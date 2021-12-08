@@ -208,41 +208,46 @@ def delete_arn_from_email(event):
 
 def add_workspace_to_email(event):
     try:
+        message = "success"
         email = event['queryStringParameters']['email']
-        arn = event['queryStringParameters']['arn']
         workspace = event['queryStringParameters']['workspace']
         
         client = boto3.client('dynamodb')
         
-        response = client.put_item(
+        response = client.get_item(
                 TableName='workspaces_vpc-launcher',
-                Item={
+                Key={
                     'workspace': {
                         'S': workspace
-                    },
-                    'arn': {
-                        'S': arn
                     },
                     'email': {
                         'S': email
                     }
                 }
             )
-        
-        response = client.put_item(
-                TableName='next-cidr_vpc-launcher',
-                Item={
-                    'workspace': {
-                        'S': workspace
-                    },
-                    'arn': {
-                        'S': arn
+            
+        if 'Item' in response:
+            message = "workspace already exists"
+        else:
+            response = client.put_item(
+                    TableName='workspaces_vpc-launcher',
+                    Item={
+                        'workspace': {
+                            'S': workspace
+                        },
+                        'nextcidr': {
+                            'S': "1"
+                        },
+                        'email': {
+                            'S': email
+                        }
                     }
-                }
-            )
+                )
+        
+        print(response)
         
         return {
-            "message": "success"
+            "message": message
         }
     except Exception as e:
         message = str(e)
@@ -308,19 +313,17 @@ def add_arn_to_email(event):
 def describe_workspaces_for_email(event):
     try:
         email = event['queryStringParameters']['email']
-        arn = event['queryStringParameters']['arn']
-        
+
         workspaces = []
         
         client = boto3.client('dynamodb')
         
         response = client.query(
             TableName='workspaces_vpc-launcher',
-            IndexName='email-arn-index',
-            KeyConditionExpression='email=:email AND arn=:arn',
+            IndexName='email-workspace-index',
+            KeyConditionExpression='email=:email',
             ExpressionAttributeValues={
-                ':email': {'S': email},
-                ':arn': {'S': arn}
+                ':email': {'S': email}
             }
         )
         
