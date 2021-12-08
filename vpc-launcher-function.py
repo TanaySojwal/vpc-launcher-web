@@ -110,7 +110,6 @@ def add_cross_acc_policy_to_role(event):
 def delete_workspace_from_email(event):
     try:
         email = event['queryStringParameters']['email']
-        arn = event['queryStringParameters']['arn']
         workspace = event['queryStringParameters']['workspace']
         
         client = boto3.client('dynamodb')
@@ -131,18 +130,6 @@ def delete_workspace_from_email(event):
             }
         )
         
-        response = client.delete_item(
-            TableName='next-cidr_vpc-launcher',
-            Key={
-                'workspace': {
-                    'S': workspace
-                }
-            },
-            ConditionExpression='arn=:arn',
-            ExpressionAttributeValues={
-                ':arn': {'S':arn}
-            }
-        )
         return {
             "message": "success"
         }
