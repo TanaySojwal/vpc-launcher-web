@@ -19,6 +19,7 @@ function createVPC() {
     var xhr = new XMLHttpRequest()
 
     const crossAccountRoleArn = document.getElementById('cross-account-role-arn').value
+    const workspace = document.getElementById('workspace').value
     const publicSubnetCheck = document.getElementById('public-subnet').checked
     const publicPrivateSubnetCheck = document.getElementById('public-private-subnet').checked
     const internetAccess = document.getElementById('private-subnet-internet').checked
@@ -38,6 +39,11 @@ function createVPC() {
     if (crossAccountRoleArn == "") {
         document.getElementById("submit").style.display = "block"
         alert("Cross account role ARN is invalid!")
+        return
+    }
+    if (workspace == "") {
+        document.getElementById("submit").style.display = "block"
+        alert("Workspace is invalid!")
         return
     }
     if (publicSubnetCheck == false && publicPrivateSubnetCheck == false) {
@@ -78,7 +84,6 @@ function createVPC() {
             xhr.send()
             xhr.onload = () => {
                 if (xhr.status == 200) {
-                    
                     var result = JSON.parse(xhr.response)
                     var azList = []
                     if (result['azList'].length >= az) {
@@ -88,99 +93,122 @@ function createVPC() {
                     } else {
                         alert("Invalid AZ value!")
                     }
-                    var uuid = getUUID(5)
-                    vpcName = vpcName.concat("-").concat(uuid)
-
-                    printNextLog(`attempting to create VPC with name = ${vpcName} in region = ${region}`)
-
-                    const vpcPayload = {
-                        crossAccountRoleArn,
-                        // isPublicOnly,
-                        // internetAccess,
-                        vpcName,
-                        region,
-                        // az,
-                        enableIPv6,
-                        email
-                    }
-                    xhr.open('POST', `${vpcLauncherAPIUrl}?action=CREATE_VPC`, true)
-                    xhr.send(JSON.stringify({vpcPayload}))
-                    document.getElementById("loader").style.display = "block"
-                    printNextLog("sleeping for 1 min while resources are ready...")
+                    printNextLog(`retrieving next CIDR for workspace = ${workspace}`)
+                    xhr.open('GET', `${vpcLauncherAPIUrl}?action=GET_NEXT_CIDR_FOR_WKSPCS&workspace=${workspace}&email=${email}`, true)
+                    xhr.send()
                     xhr.onload = () => {
-                        document.getElementById("loader").style.display = "none"
                         printNextLog(`backend response > ${xhr.response}`)
                         if (xhr.status == 200) {
+                            var nextCidr = JSON.parse(xhr.response)['nextCidr']
                             
-                            var vpcId = JSON.parse(xhr.response)['vpcId']
-                            var publicRouteTableId = JSON.parse(xhr.response)['publicRouteTableId']
-                            // return
-                            var i = 0
-                            azList.forEach(az => {
-                                printNextLog(`attempting to create subnet in az = ${az}`)
-                                var publicSubnetName = `public-subnet-${az}-${uuid}`
-                                var privateSubnetName = `private-subnet-${az}-${uuid}`
-                                var publicSubnetCidr = `10.0.${i}.0/24`
-                                i += 1
-                                var privateSubnetCidr = `10.0.${i}.0/24`
-                                i += 1
-                                var subnetPayload = {
-                                    crossAccountRoleArn,
-                                    isPublicOnly,
-                                    internetAccess,
-                                    vpcId,
-                                    publicRouteTableId,
-                                    region,
-                                    az,
-                                    publicSubnetName,
-                                    privateSubnetName,
-                                    publicSubnetCidr,
-                                    privateSubnetCidr
-                                }
-                                try {
-                                    xhr.open('POST', `${vpcLauncherAPIUrl}/create-subnet`, true)
-                                    xhr.send(JSON.stringify({subnetPayload}))
+                            var uuid = getUUID(5)
+                            vpcName = vpcName.concat("-").concat(uuid)
+        
+                            printNextLog(`attempting to create VPC with name = ${vpcName} in region = ${region} with CIDR prefix = ${nextCidr}`)
+        
+                            const vpcPayload = {
+                                crossAccountRoleArn,
+                                // isPublicOnly,
+                                // internetAccess,
+                                vpcName,
+                                region,
+                                // az,
+                                enableIPv6,
+                                email,
+                                nextCidr
+                            }
+                            xhr.open('POST', `${vpcLauncherAPIUrl}?action=CREATE_VPC`, true)
+                            xhr.send(JSON.stringify({vpcPayload}))
+                            document.getElementById("loader").style.display = "block"
+                            printNextLog("sleeping for 1 min while resources are ready...")
+                            xhr.onload = () => {
+                                document.getElementById("loader").style.display = "none"
+                                printNextLog(`backend response > ${xhr.response}`)
+                                if (xhr.status == 200) {
+                                    
+                                    var vpcId = JSON.parse(xhr.response)['vpcId']
+                                    var publicRouteTableId = JSON.parse(xhr.response)['publicRouteTableId']
+                                    var i = 0
+                                    azList.forEach(az => {
+                                        printNextLog(`attempting to create subnet in az = ${az}`)
+                                        var publicSubnetName = `public-subnet-${az}-${uuid}`
+                                        var privateSubnetName = `private-subnet-${az}-${uuid}`
+                                        var publicSubnetCidr = `${nextCidr}.0.${i}.0/24`
+                                        i += 1
+                                        var privateSubnetCidr = `${nextCidr}.0.${i}.0/24`
+                                        i += 1
+                                        var subnetPayload = {
+                                            crossAccountRoleArn,
+                                            isPublicOnly,
+                                            internetAccess,
+                                            vpcId,
+                                            publicRouteTableId,
+                                            region,
+                                            az,
+                                            publicSubnetName,
+                                            privateSubnetName,
+                                            publicSubnetCidr,
+                                            privateSubnetCidr
+                                        }
+                                        try {
+                                            xhr.open('POST', `${vpcLauncherAPIUrl}/create-subnet`, true)
+                                            xhr.send(JSON.stringify({subnetPayload}))
+                                            xhr.onload = () => {
+                                                printNextLog(`backend response > ${xhr.response}`)
+                                                if (xhr.status == 200) {
+                                                    return
+                                                } else {
+                                                    printNextLog("An error occurred while creating subnet!")
+                                                    return
+                                                }
+                                            }
+                                        } catch (error) {
+                                            console.log(error.message);
+                                        }
+                                    });
+        
+                                    document.getElementById("loader").style.display = "block"
+                                    
+                                    sleep(60000)
+        
+                                    showReloadButton()
+                                    // showDeletePolicyButton()
+                                    
+                                    document.getElementById("loader").style.display = "none"
+                                    
+                                    printNextLog(`fetching subnets for vpcId = ${vpcId}`)
+                                    xhr.open('GET', `${vpcLauncherAPIUrl}?action=GET_VPC_SUBNETS&crossAccountRoleArn=${crossAccountRoleArn}&region=${region}&vpcId=${vpcId}`, true)
+                                    xhr.send()
                                     xhr.onload = () => {
                                         printNextLog(`backend response > ${xhr.response}`)
                                         if (xhr.status == 200) {
-                                            return
+                                            if (JSON.parse(xhr.response)['subnets'].length > 0) {
+                                                printNextLog(`Updating VPC CIDR for workspace = ${workspace}`)
+                                                xhr.open('GET', `${vpcLauncherAPIUrl}?action=UPDATE_CIDR_FOR_WKSPCS&arn=${crossAccountRoleArn}&region=${region}&vpcName=${vpcName}&workspace=${workspace}&currentCidr=${nextCidr}&email=${email}`, true)
+                                                xhr.send()
+                                                xhr.onload = () => {
+                                                    printNextLog(`backend response > ${xhr.response}`)
+                                                }
+                                            }
+                                            
+                                            deletePolicyFromRole()
+                                            // printNextLog("process completed.")
                                         } else {
-                                            printNextLog("An error occurred while creating subnet!")
-                                            return
+                                            printNextLog("An error occurred while fetching subnets!")
                                         }
+                                        
                                     }
-                                } catch (error) {
-                                    console.log(error.message);
-                                }
-                            });
-
-                            document.getElementById("loader").style.display = "block"
-                            
-                            sleep(60000)
-
-                            showReloadButton()
-                            // showDeletePolicyButton()
-                            
-                            document.getElementById("loader").style.display = "none"
-                            
-                            printNextLog(`fetching subnets for vpcId = ${vpcId}`)
-                            xhr.open('GET', `${vpcLauncherAPIUrl}?action=GET_VPC_SUBNETS&crossAccountRoleArn=${crossAccountRoleArn}&region=${region}&vpcId=${vpcId}`, true)
-                            xhr.send()
-                            xhr.onload = () => {
-                                printNextLog(`backend response > ${xhr.response}`)
-                                if (xhr.status == 200) {
-                                    deletePolicyFromRole()
-                                    // printNextLog("process completed.")
-                                } else {
-                                    printNextLog("An error occurred while fetching subnets!")
-                                }
                                 
+                                } else {
+                                    printNextLog("An error occurred while creating VPC!")
+                                }
                             }
-                        
                         } else {
-                            printNextLog("An error occurred while creating VPC!")
+                            printNextLog("An error occurred while fetching next CIDR for workspace!")
                         }
+                        
                     }
+                    
 
                 } else {
                     printNextLog("An error occurred while fetching AZs!")

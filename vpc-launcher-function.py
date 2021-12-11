@@ -34,6 +34,10 @@ def lambda_handler(event, context):
             response_body = add_workspace_to_email(event)
         if event['queryStringParameters']['action'] == "DELETE_WKSPCS_FROM_EMAIL":
             response_body = delete_workspace_from_email(event)
+        if event['queryStringParameters']['action'] == "GET_NEXT_CIDR_FOR_WKSPCS":
+            response_body = get_next_cidr_for_workspace(event)
+        if event['queryStringParameters']['action'] == "UPDATE_CIDR_FOR_WKSPCS":
+            response_body = update_cidr_for_workspace(event)
     print(response_body)
     return {
         'statusCode': 200,
@@ -42,6 +46,129 @@ def lambda_handler(event, context):
         },
         "body": json.dumps(response_body)
     }
+
+def update_cidr_for_workspace(event):
+    try:
+        email = event['queryStringParameters']['email']
+        workspace = event['queryStringParameters']['workspace']
+        arn = event['queryStringParameters']['arn']
+        currentCidr = event['queryStringParameters']['currentCidr']
+        vpcName = event['queryStringParameters']['vpcName']
+        region = event['queryStringParameters']['region']
+        
+        # fetch record with workspace and email
+        # create string like 'currentCidr|vpcName|region|arn'
+        # if cidr value is empty / none
+        #     create and update cidr string set with above string
+        # else
+        #     update cidr string set with above string
+        # create array of size 256
+        # loop index (1, 255) array and fill 1s for cidrs available in set created above
+        # loop array again and find next available index with 0, this will be value of nextCidr
+        # finally update record with new string set and nextCidr value
+        client = boto3.client('dynamodb')
+        response = client.get_item(
+                TableName='workspaces_vpc-launcher',
+                Key={
+                    'workspace': {
+                        'S': workspace
+                    },
+                    'email': {
+                        'S': email
+                    }
+                }
+            )
+        print(response)
+        cidrEntry = "{}|{}|{}|{}".format(currentCidr, vpcName, region, arn)
+        if 'Item' in response:
+            cidrSet = []
+            helper = []
+            
+            if 'cidr' in response['Item']:
+                cidrSet = response['Item']['cidr']['SS']
+            
+            cidrSet.append(cidrEntry)
+            
+            nextCidr = -1
+            
+            for cidr in cidrSet:
+                helper.append(int(cidr.split("|")[0]))
+                
+            for i in range(1, 256):
+                if i not in helper:
+                    nextCidr = i
+                    break
+            
+            if nextCidr > 0:
+                response = client.put_item(
+                    TableName='workspaces_vpc-launcher',
+                    Item={
+                        'workspace': {
+                            'S': workspace
+                        },
+                        'nextcidr': {
+                            'S': str(nextCidr)
+                        },
+                        'email': {
+                            'S': email
+                        },
+                        'cidr': {
+                            'SS': cidrSet
+                        }
+                    }
+                )
+                return {
+                    "message": "success"
+                }
+            else:
+                return {
+                    "message": "encountered an error while calculating next CIDR"
+                }
+        else:
+            return {
+                "message": "workspace does not exist"
+            }
+        
+    except Exception as e:
+        message = str(e)
+        print(e)
+        return {
+            "message": message
+        }
+
+def get_next_cidr_for_workspace(event):
+    try:
+        email = event['queryStringParameters']['email']
+        workspace = event['queryStringParameters']['workspace']
+        
+        client = boto3.client('dynamodb')
+        
+        response = client.get_item(
+                TableName='workspaces_vpc-launcher',
+                Key={
+                    'workspace': {
+                        'S': workspace
+                    },
+                    'email': {
+                        'S': email
+                    }
+                }
+            )
+        print(response)
+        if 'Item' in response:
+            return {
+                "nextCidr": response['Item']['nextcidr']['S']
+            }
+        else:
+            return {
+                "message": "workspace does not exist"
+            }
+    except Exception as e:
+        message = str(e)
+        print(e)
+        return {
+            "message": message
+        }
 
 def delete_cross_acc_policy_from_role(event):
     # get detach policy from role
@@ -568,6 +695,7 @@ def create_vpc(event):
         vpc_name = payload['vpcName']
         region = payload['region']
         email = payload['email']
+        nextCidr = payload['nextCidr']
         
         # assume cross account role
         sts_client = boto3.client('sts')
@@ -597,7 +725,7 @@ def create_vpc(event):
 
         # create vpc
         vpc = ec2.create_vpc(
-            CidrBlock='10.0.0.0/16',
+            CidrBlock=nextCidr + '.0.0.0/16',
             AmazonProvidedIpv6CidrBlock=enable_IPv6,
             TagSpecifications=[{
                 'ResourceType':'vpc',
