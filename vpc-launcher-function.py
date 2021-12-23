@@ -592,6 +592,7 @@ def create_subnet(event):
         private_subnet_name = payload['privateSubnetName']
         public_subnet_cidr = payload['publicSubnetCidr']
         private_subnet_cidr = payload['privateSubnetCidr']
+        eip = payload['eip']
 
         # assume cross account role
         sts_client = boto3.client('sts')
@@ -654,8 +655,8 @@ def create_subnet(event):
 
             if (internet_access):
                 # create nat instance for private subnet
-                eip = ec2_client.allocate_address(Domain='vpc')
-                nat_gateway = ec2_client.create_nat_gateway(SubnetId=public_subnet.id,AllocationId=eip['AllocationId'])
+                # eip = ec2_client.allocate_address(Domain='vpc')
+                nat_gateway = ec2_client.create_nat_gateway(SubnetId=public_subnet.id,AllocationId=eip)
                 
                 # wait until NAT gateway is available
                 waiter = ec2_client.get_waiter('nat_gateway_available')
@@ -684,6 +685,7 @@ def create_subnet(event):
     return response_body
 
 def create_vpc(event):
+    eipList = []
     response = {}
     try:
         payload = json.loads(event['body'])['vpcPayload']
@@ -696,6 +698,7 @@ def create_vpc(event):
         region = payload['region']
         email = payload['email']
         nextCidr = payload['nextCidr']
+        azList = payload['azList']
         
         # assume cross account role
         sts_client = boto3.client('sts')
@@ -722,6 +725,10 @@ def create_vpc(event):
             region_name=region
         )
         
+        # attempt to allocate as many as Elastic IP addresses as AZs
+        for az in azList:
+            eip = ec2_client.allocate_address(Domain='vpc')
+            eipList.append(eip['AllocationId'])
 
         # create vpc
         vpc = ec2.create_vpc(
@@ -747,16 +754,36 @@ def create_vpc(event):
             GatewayId=ig.id
         )
         
-        response = {
+        return {
             "message": "success",
             "vpcId": vpc.id,
-            "publicRouteTableId": public_route_table.id
+            "publicRouteTableId": public_route_table.id,
+            "eipList": eipList
         }
 
     except Exception as e:
         print(e)
-        response = {
+        if len(eipList) > 0:
+            try:
+                # create ec2 client
+                ec2_client = boto3.client(
+                    'ec2',
+                    aws_access_key_id=response['Credentials']['AccessKeyId'],
+                    aws_secret_access_key=response['Credentials']['SecretAccessKey'],
+                    aws_session_token=response['Credentials']['SessionToken'],
+                    region_name=region
+                )
+                
+                for eip in eipList:
+                    ec2_client.release_address(AllocationId=eip)
+                
+                return {
+                    "message": "Needed EIPs above limit, increase the EIP allocation limit for this region."
+                }
+            except Exception as e:
+                return {
+                    "message": str(e)
+                }
+        return {
             "message": str(e)
         }
-
-    return response

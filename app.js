@@ -115,7 +115,8 @@ function createVPC() {
                                 // az,
                                 enableIPv6,
                                 email,
-                                nextCidr
+                                nextCidr,
+                                azList
                             }
                             xhr.open('POST', `${vpcLauncherAPIUrl}?action=CREATE_VPC`, true)
                             xhr.send(JSON.stringify({vpcPayload}))
@@ -124,9 +125,10 @@ function createVPC() {
                             xhr.onload = () => {
                                 document.getElementById("loader").style.display = "none"
                                 printNextLog(`backend response > ${xhr.response}`)
-                                if (xhr.status == 200) {
+                                if (xhr.status == 200 && JSON.parse(xhr.response)['message'] == 'success') {
                                     
                                     var vpcId = JSON.parse(xhr.response)['vpcId']
+                                    var eipList = JSON.parse(xhr.response)['eipList']
                                     var publicRouteTableId = JSON.parse(xhr.response)['publicRouteTableId']
                                     var i = 0
                                     azList.forEach(az => {
@@ -137,6 +139,7 @@ function createVPC() {
                                         i += 1
                                         var privateSubnetCidr = `${nextCidr}.0.${i}.0/24`
                                         i += 1
+                                        var eip = eipList.pop()
                                         var subnetPayload = {
                                             crossAccountRoleArn,
                                             isPublicOnly,
@@ -148,7 +151,8 @@ function createVPC() {
                                             publicSubnetName,
                                             privateSubnetName,
                                             publicSubnetCidr,
-                                            privateSubnetCidr
+                                            privateSubnetCidr,
+                                            eip
                                         }
                                         try {
                                             xhr.open('POST', `${vpcLauncherAPIUrl}/create-subnet`, true)
@@ -206,10 +210,7 @@ function createVPC() {
                         } else {
                             printNextLog("An error occurred while fetching next CIDR for workspace!")
                         }
-                        
                     }
-                    
-
                 } else {
                     printNextLog("An error occurred while fetching AZs!")
                 }
