@@ -725,7 +725,7 @@ def create_vpc(event):
 
         # create vpc
         vpc = ec2.create_vpc(
-            CidrBlock=nextCidr + '.0.0.0/16',
+            CidrBlock=str(nextCidr) + '.0.0.0/16',
             AmazonProvidedIpv6CidrBlock=enable_IPv6,
             TagSpecifications=[{
                 'ResourceType':'vpc',
