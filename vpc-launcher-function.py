@@ -593,6 +593,8 @@ def create_subnet(event):
         public_subnet_cidr = payload['publicSubnetCidr']
         private_subnet_cidr = payload['privateSubnetCidr']
         eip = payload['eip']
+        enableIPv6 = payload['enableIPv6']
+        Ipv6CidrBlock = payload['Ipv6CidrBlock']
 
         # assume cross account role
         sts_client = boto3.client('sts')
@@ -625,15 +627,28 @@ def create_subnet(event):
         vpc = ec2.Vpc(vpc_id)
 
         # creating a public subnet
-        public_subnet = ec2.create_subnet(
-            CidrBlock=public_subnet_cidr, 
-            VpcId=vpc.id,
-            TagSpecifications=[{
-                'ResourceType':'subnet',
-                'Tags':[{'Key': 'Name', 'Value':public_subnet_name}]
-            }],
-            AvailabilityZone=az
-        )
+        public_subnet = {}
+        if (enableIPv6 and len(Ipv6CidrBlock) > 0):
+            public_subnet = ec2.create_subnet(
+                CidrBlock=public_subnet_cidr, 
+                VpcId=vpc.id,
+                TagSpecifications=[{
+                    'ResourceType':'subnet',
+                    'Tags':[{'Key': 'Name', 'Value':public_subnet_name}]
+                }],
+                AvailabilityZone=az,
+                Ipv6CidrBlock=Ipv6CidrBlock
+            )
+        else:
+            public_subnet = ec2.create_subnet(
+                CidrBlock=public_subnet_cidr, 
+                VpcId=vpc.id,
+                TagSpecifications=[{
+                    'ResourceType':'subnet',
+                    'Tags':[{'Key': 'Name', 'Value':public_subnet_name}]
+                }],
+                AvailabilityZone=az
+            )
         
         # associate the route table with the subnet
         public_route_table.associate_with_subnet(SubnetId=public_subnet.id)
@@ -641,22 +656,38 @@ def create_subnet(event):
         
         if (not is_public_only):
             # create private subnet
-            private_subnet = ec2.create_subnet(
-                CidrBlock=private_subnet_cidr, 
-                VpcId=vpc.id,
-                TagSpecifications=[{
-                    'ResourceType':'subnet',
-                    'Tags':[{'Key': 'Name', 'Value':private_subnet_name}]
-                }],
-                AvailabilityZone=az
-            )
+            private_subnet = {}
+            if (enableIPv6 and len(Ipv6CidrBlock) > 0):
+                private_subnet = ec2.create_subnet(
+                    CidrBlock=private_subnet_cidr, 
+                    VpcId=vpc.id,
+                    TagSpecifications=[{
+                        'ResourceType':'subnet',
+                        'Tags':[{'Key': 'Name', 'Value':private_subnet_name}]
+                    }],
+                    AvailabilityZone=az,
+                    Ipv6CidrBlock=Ipv6CidrBlock
+                )
+            else:
+                private_subnet = ec2.create_subnet(
+                    CidrBlock=private_subnet_cidr, 
+                    VpcId=vpc.id,
+                    TagSpecifications=[{
+                        'ResourceType':'subnet',
+                        'Tags':[{'Key': 'Name', 'Value':private_subnet_name}]
+                    }],
+                    AvailabilityZone=az
+                )
             
             response_body['privateSubnetId'] = private_subnet.id
 
             if (internet_access):
                 # create nat instance for private subnet
                 # eip = ec2_client.allocate_address(Domain='vpc')
-                nat_gateway = ec2_client.create_nat_gateway(SubnetId=public_subnet.id,AllocationId=eip)
+                nat_gateway = ec2_client.create_nat_gateway(
+                    SubnetId=public_subnet.id,
+                    AllocationId=eip
+                    )
                 
                 # wait until NAT gateway is available
                 waiter = ec2_client.get_waiter('nat_gateway_available')
@@ -688,10 +719,14 @@ def create_vpc(event):
     eipList = []
     response = {}
     try:
-        payload = json.loads(event['body'])['vpcPayload']
-        print(payload)
+        # comment below when testing from lambda console
+        
+        # payload = json.loads(event['body'])['vpcPayload']
+        # print(payload)
+        
         # uncomment below when testing from lambda console
-        # payload = event['body']['payload']
+        payload = event['body']['vpcPayload']
+        
         cross_account_role_arn = payload['crossAccountRoleArn']
         enable_IPv6 = True if payload['enableIPv6'] else False
         vpc_name = payload['vpcName']
@@ -753,11 +788,12 @@ def create_vpc(event):
             DestinationCidrBlock='0.0.0.0/0',
             GatewayId=ig.id
         )
-        
+        # print(vpc.ipv6_cidr_block_association_set[0]['Ipv6CidrBlock'])
         return {
             "message": "success",
             "vpcId": vpc.id,
             "publicRouteTableId": public_route_table.id,
+            "Ipv6CidrBlock ": vpc.ipv6_cidr_block_association_set[0]['Ipv6CidrBlock'],
             "eipList": eipList
         }
 

@@ -129,6 +129,7 @@ function createVPC() {
                                     
                                     var vpcId = JSON.parse(xhr.response)['vpcId']
                                     var eipList = JSON.parse(xhr.response)['eipList']
+                                    var Ipv6CidrBlock = (enableIPv6) ? JSON.parse(xhr.response)['Ipv6CidrBlock'] : ""
                                     var publicRouteTableId = JSON.parse(xhr.response)['publicRouteTableId']
                                     var i = 0
                                     azList.forEach(az => {
@@ -152,7 +153,9 @@ function createVPC() {
                                             privateSubnetName,
                                             publicSubnetCidr,
                                             privateSubnetCidr,
-                                            eip
+                                            eip,
+                                            enableIPv6,
+                                            Ipv6CidrBlock
                                         }
                                         try {
                                             xhr.open('POST', `${vpcLauncherAPIUrl}/create-subnet`, true)
@@ -187,22 +190,19 @@ function createVPC() {
                                         printNextLog(`backend response > ${xhr.response}`)
                                         if (xhr.status == 200) {
                                             if (JSON.parse(xhr.response)['subnets'].length > 0) {
-                                                printNextLog(`Updating VPC CIDR for workspace = ${workspace}`)
+                                                printNextLog(`updating VPC CIDR for workspace = ${workspace}`)
                                                 xhr.open('GET', `${vpcLauncherAPIUrl}?action=UPDATE_CIDR_FOR_WKSPCS&arn=${crossAccountRoleArn}&region=${region}&vpcName=${vpcName}&workspace=${workspace}&currentCidr=${nextCidr}&email=${email}`, true)
                                                 xhr.send()
                                                 xhr.onload = () => {
                                                     printNextLog(`backend response > ${xhr.response}`)
                                                 }
                                             }
-                                            
                                             deletePolicyFromRole()
                                             // printNextLog("process completed.")
                                         } else {
                                             printNextLog("An error occurred while fetching subnets!")
                                         }
-                                        
                                     }
-                                
                                 } else {
                                     printNextLog("An error occurred while creating VPC!")
                                 }
@@ -363,13 +363,13 @@ function deleteWorkspaceFromEmail() {
             var result = JSON.parse(xhr.response)
             if (result['message'] == "success") {
                 alert(`Workspace deleted successfully`)
+            } else {
+                alert(`Cannot delete workspace as it has associated CIDRs!`)
             }
         } else {
             alert(`An error occurred while fetching regions!`)
         }
     }
-
-    // reload the page
     reloadPage()
 }
 
