@@ -751,6 +751,7 @@ def create_vpc(event):
         email = payload['email']
         nextCidr = payload['nextCidr']
         azList = payload['azList']
+        is_public_only = payload['isPublicOnly']
         
         # assume cross account role
         sts_client = boto3.client('sts')
@@ -778,9 +779,10 @@ def create_vpc(event):
         )
         
         # attempt to allocate as many as Elastic IP addresses as AZs
-        for az in azList:
-            eip = ec2_client.allocate_address(Domain='vpc')
-            eipList.append(eip['AllocationId'])
+        if not is_public_only:
+            for az in azList:
+                eip = ec2_client.allocate_address(Domain='vpc')
+                eipList.append(eip['AllocationId'])
 
         # create vpc
         vpc = ec2.create_vpc(

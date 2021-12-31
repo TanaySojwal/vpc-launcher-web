@@ -118,7 +118,8 @@ function createVPC() {
                                 enableIPv6,
                                 email,
                                 nextCidr,
-                                azList
+                                azList,
+                                isPublicOnly
                             }
                             xhr.open('POST', `${vpcLauncherAPIUrl}?action=CREATE_VPC`, true)
                             xhr.send(JSON.stringify({vpcPayload}))
