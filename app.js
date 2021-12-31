@@ -92,6 +92,8 @@ function createVPC() {
                         }
                     } else {
                         alert("Invalid AZ value!")
+                        deletePolicyFromRole()
+                        return
                     }
                     printNextLog(`retrieving next CIDR for workspace = ${workspace}`)
                     xhr.open('GET', `${vpcLauncherAPIUrl}?action=GET_NEXT_CIDR_FOR_WKSPCS&workspace=${workspace}&email=${email}`, true)
@@ -130,8 +132,12 @@ function createVPC() {
                                     var vpcId = JSON.parse(xhr.response)['vpcId']
                                     var eipList = JSON.parse(xhr.response)['eipList']
                                     var Ipv6CidrBlock = (enableIPv6) ? JSON.parse(xhr.response)['Ipv6CidrBlock'] : ""
+                                    var Ipv6CidrPrefix = Ipv6CidrBlock.split("::")[0]
+                                    var publicIpv6CidrBlock = Ipv6CidrBlock
+                                    var privateIpv6CidrBlock = Ipv6CidrBlock
                                     var publicRouteTableId = JSON.parse(xhr.response)['publicRouteTableId']
                                     var i = 0
+                                    var j = 0
                                     azList.forEach(az => {
                                         printNextLog(`attempting to create subnet in az = ${az}`)
                                         var publicSubnetName = `public-subnet-${az}-${uuid}`
@@ -140,6 +146,12 @@ function createVPC() {
                                         i += 1
                                         var privateSubnetCidr = `${nextCidr}.0.${i}.0/24`
                                         i += 1
+                                        if (enableIPv6 && Ipv6CidrBlock != "") {
+                                            publicIpv6CidrBlock = `${Ipv6CidrPrefix.slice(0, -1)}${j}::/64`
+                                            j += 1
+                                            privateIpv6CidrBlock = `${Ipv6CidrPrefix.slice(0, -1)}${j}::/64`
+                                            j += 1
+                                        }
                                         var eip = eipList.pop()
                                         var subnetPayload = {
                                             crossAccountRoleArn,
@@ -155,7 +167,8 @@ function createVPC() {
                                             privateSubnetCidr,
                                             eip,
                                             enableIPv6,
-                                            Ipv6CidrBlock
+                                            publicIpv6CidrBlock,
+                                            privateIpv6CidrBlock
                                         }
                                         try {
                                             xhr.open('POST', `${vpcLauncherAPIUrl}/create-subnet`, true)
@@ -198,20 +211,24 @@ function createVPC() {
                                                 }
                                             }
                                             deletePolicyFromRole()
-                                            // printNextLog("process completed.")
+                                            printNextLog("process completed!")
                                         } else {
+                                            deletePolicyFromRole()
                                             printNextLog("An error occurred while fetching subnets!")
                                         }
                                     }
                                 } else {
                                     printNextLog("An error occurred while creating VPC!")
+                                    deletePolicyFromRole()
                                 }
                             }
                         } else {
                             printNextLog("An error occurred while fetching next CIDR for workspace!")
+                            deletePolicyFromRole()
                         }
                     }
                 } else {
+                    deletePolicyFromRole()
                     printNextLog("An error occurred while fetching AZs!")
                 }
             }
@@ -249,7 +266,6 @@ function deletePolicyFromRole() {
         printNextLog(`backend response > ${xhr.response}`)
         if (xhr.status == 200) {
             printNextLog("policy detached and deleted successfully")
-            printNextLog("process completed!")
         } else {
             printNextLog('An error occurred while deleting policy.')
         }

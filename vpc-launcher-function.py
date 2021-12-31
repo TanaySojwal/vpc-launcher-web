@@ -235,30 +235,46 @@ def add_cross_acc_policy_to_role(event):
         }
 
 def delete_workspace_from_email(event):
+    message = "success"
     try:
         email = event['queryStringParameters']['email']
         workspace = event['queryStringParameters']['workspace']
         
         client = boto3.client('dynamodb')
         
-        response = client.delete_item(
-            TableName='workspaces_vpc-launcher',
-            Key={
-                'workspace': {
-                    'S': workspace
-                },
-                'email': {
-                    'S': email
+        response = client.get_item(
+                TableName='workspaces_vpc-launcher',
+                Key={
+                    'workspace': {
+                        'S': workspace
+                    },
+                    'email': {
+                        'S': email
+                    }
                 }
-            },
-            ConditionExpression='email=:email',
-            ExpressionAttributeValues={
-                ':email': {'S':email}
-            }
-        )
+            )
+            
+        if 'Item' in response and 'cidr' in response['Item']:
+            message = "Cannot delete workspace as it has associated CIDRs."
+        else:
+            response = client.delete_item(
+                TableName='workspaces_vpc-launcher',
+                Key={
+                    'workspace': {
+                        'S': workspace
+                    },
+                    'email': {
+                        'S': email
+                    }
+                },
+                ConditionExpression='email=:email',
+                ExpressionAttributeValues={
+                    ':email': {'S':email}
+                }
+            )
         
         return {
-            "message": "success"
+            "message": message
         }
     except Exception as e:
         message = str(e)
@@ -594,7 +610,8 @@ def create_subnet(event):
         private_subnet_cidr = payload['privateSubnetCidr']
         eip = payload['eip']
         enableIPv6 = payload['enableIPv6']
-        Ipv6CidrBlock = payload['Ipv6CidrBlock']
+        publicIpv6CidrBlock = payload['publicIpv6CidrBlock']
+        privateIpv6CidrBlock = payload['privateIpv6CidrBlock']
 
         # assume cross account role
         sts_client = boto3.client('sts')
@@ -637,7 +654,7 @@ def create_subnet(event):
                     'Tags':[{'Key': 'Name', 'Value':public_subnet_name}]
                 }],
                 AvailabilityZone=az,
-                Ipv6CidrBlock=Ipv6CidrBlock
+                Ipv6CidrBlock=publicIpv6CidrBlock
             )
         else:
             public_subnet = ec2.create_subnet(
@@ -666,7 +683,7 @@ def create_subnet(event):
                         'Tags':[{'Key': 'Name', 'Value':private_subnet_name}]
                     }],
                     AvailabilityZone=az,
-                    Ipv6CidrBlock=Ipv6CidrBlock
+                    Ipv6CidrBlock=privateIpv6CidrBlock
                 )
             else:
                 private_subnet = ec2.create_subnet(
@@ -721,11 +738,11 @@ def create_vpc(event):
     try:
         # comment below when testing from lambda console
         
-        # payload = json.loads(event['body'])['vpcPayload']
-        # print(payload)
+        payload = json.loads(event['body'])['vpcPayload']
+        print(payload)
         
         # uncomment below when testing from lambda console
-        payload = event['body']['vpcPayload']
+        # payload = event['body']['vpcPayload']
         
         cross_account_role_arn = payload['crossAccountRoleArn']
         enable_IPv6 = True if payload['enableIPv6'] else False
@@ -793,7 +810,7 @@ def create_vpc(event):
             "message": "success",
             "vpcId": vpc.id,
             "publicRouteTableId": public_route_table.id,
-            "Ipv6CidrBlock ": vpc.ipv6_cidr_block_association_set[0]['Ipv6CidrBlock'],
+            "Ipv6CidrBlock": vpc.ipv6_cidr_block_association_set[0]['Ipv6CidrBlock'],
             "eipList": eipList
         }
 
